@@ -1,0 +1,10 @@
+game:
+  port: ":8080"
+  connector: "cardGame"
+logger:
+  log-level: "info" # "panic" "fatal" "error" "warn" "info" "debug" "trace"
+  log-root-path: "log_record"
+  log-rotate-max-hour: "24"
+  log-rotate-hour: "1"
+  log-rotate-byte: "4294967296"
+  log-stdout: "true"
