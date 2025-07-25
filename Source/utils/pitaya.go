@@ -96,26 +96,6 @@ func GetSessionFromCtx(ctx context.Context) session.Session {
 	return App().GetSessionFromCtx(ctx)
 }
 
-// GetSessionTablePtr 從session取得table指標
-func GetSessionTablePtr(ctx context.Context) interface{} {
-	return GetSessionFromCtx(ctx).Get("Table")
-}
-
-// GetSessionTableId 從session取得table id
-func GetSessionTableId(ctx context.Context) uint32 {
-	return GetSessionFromCtx(ctx).Get("TableIdx").(uint32)
-}
-
-// GetSessionSeatId 從session取得 seat id
-func GetSessionSeatId(ctx context.Context) uint32 {
-	return GetSessionFromCtx(ctx).Get("SeatIdx").(uint32)
-}
-
-// GetSessionUserId 從session取得 user id
-func GetSessionUserId(ctx context.Context) string {
-	return GetSessionFromCtx(ctx).Get("UserId").(string)
-}
-
 func GetSessionByUID(sid string) session.Session {
 	return sp.GetSessionByUID(sid)
 }
