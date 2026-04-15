@@ -44,7 +44,6 @@ func App() pitaya.Pitaya {
 
 func GroupBroadcast(group string, remoteFunc string, data interface{}) {
 	err := App().GroupBroadcast(context.Background(), conn, group, remoteFunc, data)
-	// 有發生玩家斷線，但是沒有正常移除所以當只有最後一個連線的時候直接清空
 	if err != nil {
 		GroupBroadcastError(group, err)
 	}
