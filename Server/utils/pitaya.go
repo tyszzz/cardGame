@@ -55,6 +55,7 @@ func BeforeHandler(ctx context.Context, in interface{}) (context.Context, interf
 	if uid != "" && auth == true {
 		// 已經登入過了，不用再登入，若是登入請求，直接回傳錯誤
 		if _, ok := in.(*packet.Login); ok {
+			Log().Warnf("Already login, UID: %s, Request: %v", uid, in)
 			return ctx, in, errors.New("already login")
 		}
 		// 已經登入過且驗證ok
@@ -66,9 +67,11 @@ func BeforeHandler(ctx context.Context, in interface{}) (context.Context, interf
 			return ctx, in, nil
 		}
 		defer session.Close()
+		Log().Warnf("Not login, UID: %s, Request: %v", uid, in)
 		return ctx, in, errors.New("not login")
 	}
 	defer session.Close()
+	Log().Warnf("Not login, UID: %s, Request: %v", uid, in)
 	return ctx, in, errors.New("not login")
 }
 

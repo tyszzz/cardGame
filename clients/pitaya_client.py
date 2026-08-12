@@ -78,10 +78,11 @@ class PitayaClient:
             },
         )
 
-    def summon(self, times: int = 1, summon_type: str = "normal") -> object:
+    def summon(self, uid: str , times: int , summon_type: str) -> object:
         return self.request(
             "SummonHandler.SummonCard",
             {
+                "uid": uid,
                 "times": times,
                 "summonType": summon_type,
             },

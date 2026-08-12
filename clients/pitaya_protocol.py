@@ -1,4 +1,5 @@
 import json
+import zlib
 from dataclasses import dataclass
 
 
@@ -12,6 +13,9 @@ MESSAGE_REQUEST = 0
 MESSAGE_NOTIFY = 1
 MESSAGE_RESPONSE = 2
 MESSAGE_PUSH = 3
+MESSAGE_TYPE_MASK = 0x07
+MESSAGE_GZIP_MASK = 0x10
+MESSAGE_ERROR_MASK = 0x20
 
 
 @dataclass
@@ -65,7 +69,9 @@ def encode_message(request_id: int, route: str, body: object) -> bytes:
 
     payload = bytes((message_type,))
     payload += encode_varint(request_id)
-    payload += encode_varint(len(route_bytes))
+    if len(route_bytes) > 0xFF:
+        raise ValueError("Pitaya route is longer than 255 bytes")
+    payload += bytes((len(route_bytes),))
     payload += route_bytes
     payload += body_bytes
     return encode_packet(PACKET_DATA, payload)
@@ -77,7 +83,9 @@ def encode_notify(route: str, body: object) -> bytes:
     message_type = MESSAGE_NOTIFY << 1
 
     payload = bytes((message_type,))
-    payload += encode_varint(len(route_bytes))
+    if len(route_bytes) > 0xFF:
+        raise ValueError("Pitaya route is longer than 255 bytes")
+    payload += bytes((len(route_bytes),))
     payload += route_bytes
     payload += body_bytes
     return encode_packet(PACKET_DATA, payload)
@@ -88,15 +96,23 @@ def decode_message(payload: bytes) -> Message:
         raise ValueError("Empty Pitaya message")
 
     offset = 0
-    message_type = payload[offset] >> 1
-    compressed_route = payload[offset] & 1
+    flag = payload[offset]
+    message_type = (flag >> 1) & MESSAGE_TYPE_MASK
+    compressed_route = flag & 1
+    compressed_body = bool(flag & MESSAGE_GZIP_MASK)
     offset += 1
 
     request_id = 0
     if message_type in (MESSAGE_REQUEST, MESSAGE_RESPONSE):
         request_id, offset = decode_varint(payload, offset)
     if message_type == MESSAGE_RESPONSE:
-        return Message(message_type, request_id, "", payload[offset:])
+        body = payload[offset:]
+        if compressed_body:
+            try:
+                body = zlib.decompress(body)
+            except zlib.error as error:
+                raise ValueError("Invalid compressed Pitaya message body") from error
+        return Message(message_type, request_id, "", body)
 
     if compressed_route:
         raise ValueError("Compressed Pitaya routes are not supported")
@@ -107,13 +123,22 @@ def decode_message(payload: bytes) -> Message:
             f"payload={payload.hex()}"
         )
 
-    route_length, offset = decode_varint(payload, offset)
+    if offset >= len(payload):
+        raise ValueError("Missing Pitaya route length")
+    route_length = payload[offset]
+    offset += 1
     route_end = offset + route_length
     if route_end > len(payload):
         raise ValueError("Invalid Pitaya route length")
 
     route = payload[offset:route_end].decode("utf-8")
-    return Message(message_type, request_id, route, payload[route_end:])
+    body = payload[route_end:]
+    if compressed_body:
+        try:
+            body = zlib.decompress(body)
+        except zlib.error as error:
+            raise ValueError("Invalid compressed Pitaya message body") from error
+    return Message(message_type, request_id, route, body)
 
 
 def encode_varint(value: int) -> bytes:

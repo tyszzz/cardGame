@@ -5,7 +5,7 @@ from tkinter import messagebox, ttk
 
 from pitaya_client import PitayaClient
 
-HOST = "127.0.0.1"
+HOST = "172.31.11.52"
 PORT = 8080
 
 class GameClientWindow:
@@ -15,12 +15,13 @@ class GameClientWindow:
 		self.root.resizable(False, False)
 
 		self.client = PitayaClient(f"ws://{HOST}:{PORT}/")
-		self.client.register_route("Summon.Notify", self._handle_server_push)
+		# self.client.register_route("Summon.Notify", self._handle_server_push)
 		self.login_in_progress = False
 		self.action_in_progress = False
 
 		self.account_id = tk.StringVar()
 		self.password = tk.StringVar()
+		self.uid = None
 		self.status = tk.StringVar(value="Disconnected")
 		self.game_status = tk.StringVar(value="Ready")
 		self.login_frame = None
@@ -97,6 +98,7 @@ class GameClientWindow:
 		if isinstance(result, dict) and result.get("resultCode") == 0:
 			self.status.set("Login successful")
 			self._show_game_frame()
+			self.uid = result.get("uid")
 			self._append_result("Login", result)
 			return
 
@@ -166,7 +168,7 @@ class GameClientWindow:
 
 	def _summon_in_background(self):
 		try:
-			result = self.client.summon()
+			result = self.client.summon(self.uid,1, "Normal")
 			self.root.after(0, self._handle_summon_result, result)
 		except Exception as error:
 			self.root.after(0, self._show_summon_error, error)

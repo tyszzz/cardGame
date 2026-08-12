@@ -8,3 +8,12 @@ type (
 		UID        string `json:"uid"`
 	}
 )
+
+// summon packet
+type (
+	SummonCardResult struct {
+		UID      string `json:"uid"`
+		CardId   string `json:"cardId"`
+		CardName string `json:"cardName"`
+	}
+)

@@ -13,6 +13,7 @@ type (
 // summon packet
 type (
 	SummonCard struct {
+		UID        string               `json:"uid"`
 		Times      int32                `json:"times"`
 		SummonType constants.SummonType `json:"summonType"`
 	}

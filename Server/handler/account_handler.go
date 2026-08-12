@@ -52,7 +52,7 @@ func (h *AccountHandler) Login(
 	// 登入成功，將 session 與 驗證結果 綁定到帳號 ID
 	session.Set("auth", true)
 	session.Bind(ctx, data.AccountId)
-
+	utils.Log().Infof("login success, accountId: %s, UID: %s", data.AccountId, session.UID())
 	return &packet.LoginResult{
 		ResultCode: constants.Success,
 		AccountId:  data.AccountId,
