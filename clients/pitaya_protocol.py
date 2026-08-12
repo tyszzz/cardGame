@@ -9,8 +9,9 @@ PACKET_DATA = 4
 PACKET_KICK = 5
 
 MESSAGE_REQUEST = 0
-MESSAGE_RESPONSE = 1
-MESSAGE_PUSH = 2
+MESSAGE_NOTIFY = 1
+MESSAGE_RESPONSE = 2
+MESSAGE_PUSH = 3
 
 
 @dataclass
@@ -70,22 +71,30 @@ def encode_message(request_id: int, route: str, body: object) -> bytes:
     return encode_packet(PACKET_DATA, payload)
 
 
+def encode_notify(route: str, body: object) -> bytes:
+    route_bytes = route.encode("utf-8")
+    body_bytes = json.dumps(body, separators=(",", ":")).encode("utf-8")
+    message_type = MESSAGE_NOTIFY << 1
+
+    payload = bytes((message_type,))
+    payload += encode_varint(len(route_bytes))
+    payload += route_bytes
+    payload += body_bytes
+    return encode_packet(PACKET_DATA, payload)
+
+
 def decode_message(payload: bytes) -> Message:
     if not payload:
         raise ValueError("Empty Pitaya message")
-
-    # Pitaya's JSON response frame uses 0x04 followed by the request id.
-    if payload[0] == 0x04:
-        if len(payload) < 2:
-            raise ValueError("Incomplete Pitaya response message")
-        return Message(MESSAGE_RESPONSE, payload[1], "", payload[2:])
 
     offset = 0
     message_type = payload[offset] >> 1
     compressed_route = payload[offset] & 1
     offset += 1
 
-    request_id, offset = decode_varint(payload, offset)
+    request_id = 0
+    if message_type in (MESSAGE_REQUEST, MESSAGE_RESPONSE):
+        request_id, offset = decode_varint(payload, offset)
     if message_type == MESSAGE_RESPONSE:
         return Message(message_type, request_id, "", payload[offset:])
 
