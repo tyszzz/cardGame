@@ -6,7 +6,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -67,6 +69,7 @@ func NewRotateWriter(logPath, prefix string, maxAge, rotateTime time.Duration, r
 // SetupLogrusRotate 設置 Logrus 與單一目錄的日誌輪轉
 func SetupLogrusRotate(setting LogConfig, isPitaya bool, sharedWriter *RotateWriter) (*logrus.Logger, *LevelHook, error) {
 	logIns := logrus.New()
+	logIns.SetReportCaller(true)
 	// 設定要紀錄的log level 以上
 	logIns.SetLevel(setting.LogLevelSet)
 
@@ -170,6 +173,9 @@ func (f *GameFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	data["s_m"] = entry.Message
 	data["s_l"] = levelMap[entry.Level]
 	data["s_type"] = "Log"
+	if caller := formatCaller(entry); caller != "" {
+		data["caller"] = caller
+	}
 
 	// 客製化的field欄位
 	for k, v := range f.FieldMap {
@@ -212,6 +218,9 @@ func (f *PitayaFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	data["s_t"] = entry.Time.UTC().Format(f.TimestampFormat)
 	data["s_l"] = levelMap[entry.Level]
 	data["s_type"] = "Log"
+	if caller := formatCaller(entry); caller != "" {
+		data["caller"] = caller
+	}
 
 	// 客製化的field欄位
 	for k, v := range f.FieldMap {
@@ -236,6 +245,35 @@ func (f *PitayaFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	}
 
 	return append(serialized, '\n'), nil
+}
+
+func formatCaller(entry *logrus.Entry) string {
+	if entry.Caller == nil {
+		return ""
+	}
+
+	function := runtime.FuncForPC(entry.Caller.PC)
+	if function == nil {
+		return entry.Caller.Function
+	}
+
+	name := function.Name()
+	packageName := ""
+	if slash := strings.LastIndex(name, "/"); slash >= 0 {
+		packagePath := name[:slash]
+		name = name[slash+1:]
+		if packageSlash := strings.LastIndex(packagePath, "/"); packageSlash >= 0 {
+			packageName = packagePath[packageSlash+1:]
+		} else {
+			packageName = packagePath
+		}
+	}
+	name = strings.TrimPrefix(name, "(*")
+	name = strings.Replace(name, ").", ".", 1)
+	if packageName == "" {
+		return name
+	}
+	return packageName + "." + name
 }
 
 // NewLevelHook 建立新的 LevelHook
