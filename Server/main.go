@@ -1,7 +1,6 @@
 package main
 
 import (
-	"cardGame/handler"
 	"cardGame/modules"
 	"cardGame/utils"
 
@@ -13,9 +12,14 @@ func main() {
 	defer app.Shutdown()
 
 	mm := modules.NewModulesManager()
-	app.Register(handler.New(mm),
-		component.WithName("CardHandler"),
+	app.Register(
+		mm.GetSummonHandler(),
+		component.WithName("SummonHandler"),
+	)
+
+	app.Register(
+		mm.GetAccountHandler(),
+		component.WithName("AccountHandler"),
 	)
 	app.Start()
-	mm.ModulesPool["test"].Stop()
 }

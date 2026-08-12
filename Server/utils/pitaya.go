@@ -2,6 +2,7 @@ package utils
 
 import (
 	"cardGame/global"
+	"cardGame/model/packet"
 	"context"
 	"errors"
 	"sync"
@@ -30,16 +31,45 @@ func App() pitaya.Pitaya {
 			conn            = global.GameConf.Game.Connector
 			builder         = pitaya.NewBuilderWithConfigs(true, conn, pitaya.Standalone, map[string]string{}, origConf)
 			rateLimitConfig = config.NewPitayaConfig(origConf).Conn.RateLimiting
-			origAcceptor    = acceptor.NewWSAcceptor(viper.GetString("fk.port"))
+			origAcceptor    = acceptor.NewWSAcceptor(viper.GetString("game.port"))
 			acceptorLimit   = acceptorwrapper.WithWrappers(
 				origAcceptor,
 				acceptorwrapper.NewRateLimitingWrapper(builder.MetricsReporters, rateLimitConfig))
 		)
 		builder.AddAcceptor(acceptorLimit)
 		app = builder.Build()
+		builder.HandlerHooks.BeforeHandler.PushBack(BeforeHandler)
 		sp = builder.SessionPool
 	})
 	return app
+}
+func BeforeHandler(ctx context.Context, in interface{}) (context.Context, interface{}, error) {
+	var (
+		session  = GetSessionFromCtx(ctx)
+		auth, ok = session.Get("auth").(bool)
+		uid      = session.UID()
+	)
+	if !ok {
+		auth = false
+	}
+	if uid != "" && auth == true {
+		// 已經登入過了，不用再登入，若是登入請求，直接回傳錯誤
+		if _, ok := in.(*packet.Login); ok {
+			return ctx, in, errors.New("already login")
+		}
+		// 已經登入過且驗證ok
+		return ctx, in, nil
+	}
+	if uid == "" && !auth {
+		// 沒有登入過，沒有驗證過，僅放行第一個登入的請求，其他的都不放行
+		if _, ok := in.(*packet.Login); ok {
+			return ctx, in, nil
+		}
+		defer session.Close()
+		return ctx, in, errors.New("not login")
+	}
+	defer session.Close()
+	return ctx, in, errors.New("not login")
 }
 
 func GroupBroadcast(group string, remoteFunc string, data interface{}) {

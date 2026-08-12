@@ -1,12 +1,13 @@
 package modules
 
 import (
-	"cardGame/model/constants"
-	packetcontroller "cardGame/modules/packet-controller"
+	"cardGame/handler"
+	"cardGame/services"
 )
 
 type ModulesManager struct {
-	ModulesPool map[constants.ControllerType]ModulesFunc
+	accountHandler *handler.AccountHandler
+	summonHandler  *handler.SummonHandler
 }
 
 type ModulesFunc interface {
@@ -16,13 +17,24 @@ type ModulesFunc interface {
 }
 
 func NewModulesManager() *ModulesManager {
-	mm := &ModulesManager{
-		ModulesPool: make(map[string]ModulesFunc),
-	}
-	pc := packetcontroller.NewPacketController()
-	mm.ModulesPool[constants.PACKETCONTROLLER] = pc
+	mm := &ModulesManager{}
+
+	// account
+	mm.accountHandler = handler.NewAccountHandler(
+		services.NewAccountService(),
+	)
+
+	// summon
+	mm.summonHandler = handler.NewSummonHandler(
+		services.NewSummonService(),
+	)
 	return mm
 }
-func InitModules() {
 
+func (mm *ModulesManager) GetSummonHandler() *handler.SummonHandler {
+	return mm.summonHandler
+}
+
+func (mm *ModulesManager) GetAccountHandler() *handler.AccountHandler {
+	return mm.accountHandler
 }
