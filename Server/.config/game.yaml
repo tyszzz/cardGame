@@ -8,3 +8,4 @@ logger:
   log-rotate-hour: "1"
   log-rotate-byte: "4294967296"
   log-stdout: "true"
+  log-file: "true"

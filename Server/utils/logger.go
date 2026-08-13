@@ -49,7 +49,7 @@ func NewJsonLogger() interfaces.Logger {
 	)
 
 	// 確保 shared writer 已初始化
-	if sharedWriter == nil {
+	if sharedWriter == nil && isLogFileEnabled() {
 		if err := initSharedWriter(); err != nil {
 			fmt.Printf("初始化共用 writer 失敗: %v\n", err)
 			return nil
@@ -58,6 +58,7 @@ func NewJsonLogger() interfaces.Logger {
 
 	pLog, pLogHook, err = SetupLogrusRotate(LogConfig{
 		IsToStdout:   true,
+		IsToFile:     isLogFileEnabled(),
 		IsAsyncWrite: false,
 		LogLevelSet:  getLogLevel(),
 		FieldMap: map[string]string{
@@ -88,7 +89,7 @@ func Log() *logrus.Logger {
 		}
 
 		// 確保 shared writer 已初始化
-		if sharedWriter == nil {
+		if sharedWriter == nil && isLogFileEnabled() {
 			if err := initSharedWriter(); err != nil {
 				fmt.Printf("初始化共用 writer 失敗: %v\n", err)
 				return
@@ -97,6 +98,7 @@ func Log() *logrus.Logger {
 
 		log, normalLogHook, err = SetupLogrusRotate(LogConfig{
 			IsToStdout:   stdOut,
+			IsToFile:     isLogFileEnabled(),
 			IsAsyncWrite: false,
 			LogLevelSet:  getLogLevel(),
 			FieldMap: map[string]string{
@@ -114,8 +116,24 @@ func Log() *logrus.Logger {
 
 // CloseLogHook 如果有啟用異步寫入log，則要等channel內的log寫完
 func CloseLogHook() {
-	normalLogHook.Wait()
-	pLogHook.Wait()
+	if normalLogHook != nil {
+		normalLogHook.Wait()
+	}
+	if pLogHook != nil {
+		pLogHook.Wait()
+	}
+}
+
+func isLogFileEnabled() bool {
+	if global.GameConf.Logger.LogFile == "" {
+		return true
+	}
+
+	enabled, err := strconv.ParseBool(global.GameConf.Logger.LogFile)
+	if err != nil {
+		return true
+	}
+	return enabled
 }
 
 // getLogLevel 取得設定檔的log層級

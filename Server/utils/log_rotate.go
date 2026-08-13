@@ -74,11 +74,16 @@ func SetupLogrusRotate(setting LogConfig, isPitaya bool, sharedWriter *RotateWri
 	logIns.SetLevel(setting.LogLevelSet)
 
 	var formatter logrus.Formatter
+	var stdoutFormatter logrus.Formatter
 	if isPitaya {
 		// pitaya 用 formatter
 		formatter = &PitayaFormatter{
 			TimestampFormat: "2006-01-02T15:04:05.000Z",
 			FieldMap:        setting.FieldMap,
+		}
+		stdoutFormatter = &ConsoleFormatter{
+			TimestampFormat:     "2006-01-02T15:04:05.000Z",
+			IncludePitayaFields: true,
 		}
 	} else {
 		// game server 用 formatter
@@ -86,8 +91,11 @@ func SetupLogrusRotate(setting LogConfig, isPitaya bool, sharedWriter *RotateWri
 			TimestampFormat: "2006-01-02T15:04:05.000Z",
 			FieldMap:        setting.FieldMap,
 		}
+		stdoutFormatter = &ConsoleFormatter{
+			TimestampFormat: "2006-01-02T15:04:05.000Z",
+		}
 	}
-	logIns.SetFormatter(formatter)
+	logIns.SetFormatter(stdoutFormatter)
 
 	// 是否要os standard output
 	if setting.IsToStdout {
@@ -107,6 +115,14 @@ func SetupLogrusRotate(setting LogConfig, isPitaya bool, sharedWriter *RotateWri
 		logrus.TraceLevel,
 	}
 
+	if !setting.IsToFile {
+		return logIns, nil, nil
+	}
+
+	if sharedWriter == nil {
+		return nil, nil, fmt.Errorf("log file output is enabled but shared writer is nil")
+	}
+
 	levelHook := NewLevelHook(formatter, levels, setting.IsAsyncWrite)
 
 	for _, level := range levels {
@@ -119,6 +135,7 @@ func SetupLogrusRotate(setting LogConfig, isPitaya bool, sharedWriter *RotateWri
 
 type LogConfig struct {
 	IsToStdout    bool
+	IsToFile      bool
 	IsAsyncWrite  bool
 	LogNamePrefix string
 	LogPath       string
@@ -149,6 +166,42 @@ type LevelHook struct {
 type GameFormatter struct {
 	TimestampFormat string
 	FieldMap        map[string]string
+}
+
+type ConsoleFormatter struct {
+	TimestampFormat     string
+	IncludePitayaFields bool
+}
+
+func (f *ConsoleFormatter) Format(entry *logrus.Entry) ([]byte, error) {
+	levelMap := map[logrus.Level]string{
+		logrus.PanicLevel: "Fatal",
+		logrus.FatalLevel: "Fatal",
+		logrus.ErrorLevel: "Error",
+		logrus.WarnLevel:  "Warning",
+		logrus.InfoLevel:  "Information",
+		logrus.DebugLevel: "Debug",
+		logrus.TraceLevel: "Verbose",
+	}
+
+	caller := formatCaller(entry)
+	message := entry.Message
+	if f.IncludePitayaFields {
+		for _, key := range []string{"route", "requestId", "userId"} {
+			if value, ok := entry.Data[key]; ok {
+				message += fmt.Sprintf(", %s: %v", key, value)
+			}
+		}
+	}
+
+	line := fmt.Sprintf(
+		"%s | %s | %s | %s\n",
+		entry.Time.UTC().Format(f.TimestampFormat),
+		levelMap[entry.Level],
+		caller,
+		message,
+	)
+	return []byte(line), nil
 }
 
 // Format implements the logrus.Formatter interface

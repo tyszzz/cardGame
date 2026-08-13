@@ -15,6 +15,7 @@ type (
 			LogTime   string `mapstructure:"log-rotate-hour"`
 			LogSize   string `mapstructure:"log-rotate-byte"`
 			LogStdOut string `mapstructure:"log-stdout"`
+			LogFile   string `mapstructure:"log-file"`
 		} `mapstructure:"logger"`
 	}
 )
