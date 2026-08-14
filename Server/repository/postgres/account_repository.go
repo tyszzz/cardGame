@@ -2,6 +2,7 @@ package postgres
 
 import (
 	postgresDto "cardGame/dto/postgres"
+	"context"
 
 	"gorm.io/gorm"
 )
@@ -16,6 +17,14 @@ func InitAccountRepo(db *gorm.DB) *AccountRepo {
 	}
 }
 
-func (r *AccountRepo) CreateNewAccount(account *postgresDto.Account) error {
-	return r.Db.Create(account).Error
+func (r *AccountRepo) CreateNewAccount(ctx context.Context, account *postgresDto.Account) error {
+	return r.Db.WithContext(ctx).Create(account).Error
+}
+
+func (r *AccountRepo) GetAccountByAccountId(ctx context.Context, accountId string) (*postgresDto.Account, error) {
+	var account postgresDto.Account
+	if err := r.Db.WithContext(ctx).Where("account_id = ?", accountId).First(&account).Error; err != nil {
+		return nil, err
+	}
+	return &account, nil
 }

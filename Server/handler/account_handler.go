@@ -10,7 +10,7 @@ import (
 )
 
 type AccountService interface {
-	CreateAccount(ctx context.Context)
+	CreateNewAccount(ctx context.Context, data *packet.CreateNewAccount) (bool, error)
 	Login(ctx context.Context, data *packet.Login) (bool, error)
 }
 type (
@@ -26,10 +26,11 @@ func NewAccountHandler(as AccountService) *AccountHandler {
 	}
 }
 
-func (h *AccountHandler) CreateAccount(
+func (h *AccountHandler) CreateNewAccount(
 	ctx context.Context,
-) {
-	h.as.CreateAccount(ctx)
+	data *packet.CreateNewAccount,
+) (bool, error) {
+	return h.as.CreateNewAccount(ctx, data)
 }
 
 func (h *AccountHandler) Login(
@@ -45,7 +46,6 @@ func (h *AccountHandler) Login(
 		return &packet.LoginResult{
 			ResultCode: constants.LoginFailed,
 			AccountId:  data.AccountId,
-			UID:        "",
 		}, nil
 	}
 
@@ -56,6 +56,5 @@ func (h *AccountHandler) Login(
 	return &packet.LoginResult{
 		ResultCode: constants.Success,
 		AccountId:  data.AccountId,
-		UID:        session.UID(),
 	}, nil
 }

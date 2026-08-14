@@ -4,6 +4,11 @@ import "cardGame/model/constants"
 
 // account packet
 type (
+	CreateNewAccount struct {
+		AccountId string `json:"accountId"`
+		Password  string `json:"password"`
+	}
+
 	Login struct {
 		AccountId string `json:"accountId"`
 		Password  string `json:"password"`
@@ -13,7 +18,6 @@ type (
 // summon packet
 type (
 	SummonCard struct {
-		UID        string               `json:"uid"`
 		Times      int32                `json:"times"`
 		SummonType constants.SummonType `json:"summonType"`
 	}

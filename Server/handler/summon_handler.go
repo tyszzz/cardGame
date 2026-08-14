@@ -30,12 +30,11 @@ func (h *SummonHandler) SummonCard(
 ) (*packet.SummonCardResult, error) {
 	result, err := h.ss.SummonCard(ctx, data)
 	if err != nil {
-		utils.Log().Errorf("SummonCard error, UID: %s, Error: %v", data.UID, err)
+		utils.Log().Errorf("SummonCard error, Error: %v", err)
 		return nil, err
 	}
-	utils.Log().Infof("SummonCard result, UID: %s, CardId: %s, CardName: %s", result.UID, result.CardId, result.CardName)
+	utils.Log().Infof("SummonCard result, CardId: %s, CardName: %s", result.CardId, result.CardName)
 	return &packet.SummonCardResult{
-		UID:      result.UID,
 		CardId:   result.CardId,
 		CardName: result.CardName,
 	}, nil
