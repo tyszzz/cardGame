@@ -1,7 +1,9 @@
 package modules
 
 import (
+	postgresDb "cardGame/database/postgres"
 	"cardGame/handler"
+	postgresRepo "cardGame/repository/postgres"
 	"cardGame/services"
 )
 
@@ -19,9 +21,11 @@ type ModulesFunc interface {
 func NewModulesManager() *ModulesManager {
 	mm := &ModulesManager{}
 
+	db := postgresDb.Init()
 	// account
+	accountRepo := postgresRepo.InitAccountRepo(db)
 	mm.accountHandler = handler.NewAccountHandler(
-		services.NewAccountService(),
+		services.NewAccountService(accountRepo),
 	)
 
 	// summon

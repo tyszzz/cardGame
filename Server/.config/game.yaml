@@ -9,3 +9,9 @@ logger:
   log-rotate-byte: "4294967296"
   log-stdout: "true"
   log-file: "true"
+postgres:
+  host: "localhost"
+  port: "5433"
+  user: "tyszzz"
+  password: "tyszzz"
+  dbname: "tyszzz"

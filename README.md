@@ -8,6 +8,10 @@ self create game
 - save data in db or redis
 
 ## repos
+- database
+    - 資料套件模組
+- dto
+    - 資料庫表格結構
 - feature
     - 各種功能
 - global
@@ -18,6 +22,8 @@ self create game
     - 全域通用的結構
 - modules
     - 模組總管
+- repository
+    - 資料表相關功能
 - services
     - 各個功能的主要邏輯
     - redis db等連線請求也在這

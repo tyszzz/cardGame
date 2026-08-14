@@ -2,15 +2,19 @@ package services
 
 import (
 	"cardGame/model/packet"
+	postgresRepo "cardGame/repository/postgres"
 	"cardGame/utils"
 	"context"
 )
 
 type AccountService struct {
+	AccountRepo *postgresRepo.AccountRepo
 }
 
-func NewAccountService() *AccountService {
-	return &AccountService{}
+func NewAccountService(accountRepo *postgresRepo.AccountRepo) *AccountService {
+	return &AccountService{
+		AccountRepo: accountRepo,
+	}
 }
 
 func (s *AccountService) CreateAccount(ctx context.Context) {
