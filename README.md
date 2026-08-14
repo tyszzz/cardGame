@@ -43,7 +43,7 @@ cd /cardGame
 source .venv/bin/activate
 ```
 
-啟用成功後，終端機提示字元通常會出現 `(.venv)`。
+啟用成功後，終端機提示字元會出現 `(.venv)`。
 
 ### 安裝前端測試套件
 
@@ -105,7 +105,88 @@ deactivate
 在 VS Code 執行 `Python: Select Interpreter`，選擇：
 
 ```text
-/home/tyszzz/project/cardGame/.venv/bin/python
+/cardGame/.venv/bin/python
 ```
+
+## Python 前端打包
+
+Python 前端可以使用 PyInstaller 打包成執行檔，使用者不需要另外安裝 Python、tkinter 等套件。
+
+Windows 的 `.exe` 建議在 Windows 環境中打包。Linux 不能直接產生可在 Windows 執行的 `.exe`。
+
+### Windows 安裝打包工具
+
+在 Windows 開啟 PowerShell，進入 `clients` 目錄或專案目錄後執行：
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+python -m pip install --upgrade pip
+python -m pip install websocket-client pyinstaller
+```
+
+### 建立測試版
+
+建議先使用 `--onedir` 測試，輸出內容較容易檢查：
+
+```powershell
+cd clients
+pyinstaller --clean --onedir --name CardGameClient main.py
+```
+
+輸出位置：
+
+```text
+clients\dist\CardGameClient\
+```
+
+測試版若發生錯誤，可以直接在 PowerShell 執行，查看錯誤訊息。
+
+### 建立正式 GUI 版
+
+確認測試版可以正常登入與操作後，使用 `--onefile --windowed` 打包成單一 GUI 執行檔：
+
+```powershell
+cd clients
+pyinstaller --clean --onefile --windowed --name CardGameClient main.py
+```
+
+輸出檔案：
+
+```text
+clients\dist\CardGameClient.exe
+```
+
+`--onefile` 會輸出單一 exe；`--windowed` 執行時不會開啟命令列視窗，適合 tkinter GUI。
+
+### 除錯版本
+
+如果正式 GUI 版沒有顯示錯誤，可以先移除 `--windowed`：
+
+```powershell
+cd clients
+pyinstaller --clean --onefile --name CardGameClient main.py
+```
+
+執行時保留 PowerShell 視窗，可以查看：
+
+- WebSocket 連線錯誤
+- Pitaya handshake 或封包解析錯誤
+- tkinter 啟動錯誤
+- 後端未啟動或無法連線
+
+### 前端檔案
+
+PyInstaller 會依照 `main.py` 的 import 自動尋找同目錄的模組：
+
+```text
+clients/
+    main.py
+    pitaya_client.py
+    pitaya_protocol.py
+```
+
+如果三個檔案位於同一個 `clients` 目錄，通常不需要額外設定 spec 檔案。
+
 
 不建議使用 `--break-system-packages`，以免破壞由系統套件管理的 Python 環境。
