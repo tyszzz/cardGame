@@ -62,8 +62,11 @@ func BeforeHandler(ctx context.Context, in interface{}) (context.Context, interf
 		return ctx, in, nil
 	}
 	if uid == "" && !auth {
-		// 沒有登入過，沒有驗證過，僅放行第一個登入的請求，其他的都不放行
+		// 沒有登入過，沒有驗證過，僅放行第一個登入的請求和建立帳戶請求，其他的都不放行
 		if _, ok := in.(*packet.Login); ok {
+			return ctx, in, nil
+		}
+		if _, ok := in.(*packet.CreateNewAccount); ok {
 			return ctx, in, nil
 		}
 		defer session.Close()

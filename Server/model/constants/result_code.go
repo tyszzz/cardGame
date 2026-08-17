@@ -2,6 +2,7 @@ package constants
 
 // result code
 const (
-	Success     = 0
-	LoginFailed = 1
+	Success             = 0
+	CreateAccountFailed = 1
+	LoginFailed         = 2
 )

@@ -1,10 +1,22 @@
 package packet
 
+// base packet
+type (
+	BaseResult struct {
+		ResultCode int32 `json:"resultCode"`
+	}
+)
+
 // account packet
 type (
+	CreateAccountResult struct {
+		BaseResult
+		AccountId string `json:"accountId"`
+	}
+
 	LoginResult struct {
-		ResultCode int32  `json:"resultCode"`
-		AccountId  string `json:"accountId"`
+		BaseResult
+		AccountId string `json:"accountId"`
 	}
 )
 

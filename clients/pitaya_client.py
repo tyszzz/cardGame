@@ -78,6 +78,15 @@ class PitayaClient:
             },
         )
 
+    def create_account(self, account_id: str, password: str) -> object:
+        return self.request(
+            "AccountHandler.CreateNewAccount",
+            {
+                "accountId": account_id,
+                "password": password,
+            },
+        )
+
     def summon(self, uid: str , times: int , summon_type: str) -> object:
         return self.request(
             "SummonHandler.SummonCard",
