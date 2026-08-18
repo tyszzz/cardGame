@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Card JSON Editor</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111827;
+      --panel: #1f2937;
+      --panel-light: #273449;
+      --text: #f3f4f6;
+      --muted: #a5b4c7;
+      --accent: #60a5fa;
+      --accent-strong: #2563eb;
+      --danger: #fca5a5;
+      --border: #3b4a61;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Georgia, "Noto Serif TC", serif;
+    }
+
+    main {
+      width: min(960px, calc(100% - 32px));
+      margin: 32px auto;
+    }
+
+    header { margin-bottom: 24px; }
+    h1 { margin: 0 0 8px; font-size: clamp(1.8rem, 4vw, 2.8rem); }
+    header p { margin: 0; color: var(--muted); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    section {
+      padding: 20px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    h2 { margin: 0 0 16px; font-size: 1.15rem; }
+
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+    label { display: block; margin-bottom: 6px; font-weight: 700; }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px 11px;
+      background: var(--panel-light);
+      color: var(--text);
+      font: inherit;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 4px;
+      padding: 10px 15px;
+      background: var(--accent-strong);
+      color: white;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+    }
+
+    button:hover { background: var(--accent); color: #10203b; }
+    button.secondary { background: #475569; }
+    button.secondary:hover { background: #64748b; color: white; }
+
+    textarea {
+      min-height: 330px;
+      resize: vertical;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    .message {
+      min-height: 1.4em;
+      margin-top: 12px;
+      color: var(--muted);
+    }
+
+    .message.error { color: var(--danger); }
+    .message.success { color: #86efac; }
+
+    @media (max-width: 720px) {
+      main { margin: 20px auto; }
+      .layout { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Card JSON Editor</h1>
+      <p>輸入一張卡片的定義，預覽後下載成 JSON seed 檔案。</p>
+    </header>
+
+    <div class="layout">
+      <section>
+        <h2>Card Definition</h2>
+        <form id="card-form" novalidate>
+          <div class="field">
+            <label for="card-id">Card ID</label>
+            <input id="card-id" name="cardId" required maxlength="64" placeholder="card_001">
+          </div>
+
+          <div class="field">
+            <label for="card-name">Card Name</label>
+            <input id="card-name" name="cardName" required maxlength="100" placeholder="Test Card">
+          </div>
+
+          <div class="field">
+            <label for="rarity">Rarity</label>
+            <select id="rarity" name="rarity" required>
+              <option value="R">R</option>
+              <option value="SR">SR</option>
+              <option value="SSR">SSR</option>
+              <option value="UR">UR</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="race">Race</label>
+            <select id="race" name="race" required>
+              <option value="Human">Human</option>
+              <option value="Immortal">Immortal</option>
+              <option value="Demon">Demon</option>
+              <option value="Dragon">Dragon</option>
+              <option value="Hybrid">Hybrid</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Base Config</label>
+            <div class="stats">
+              <input id="attack" name="attack" type="number" min="0" step="1" required placeholder="Attack" aria-label="Attack">
+              <input id="defense" name="defense" type="number" min="0" step="1" required placeholder="Defense" aria-label="Defense">
+              <input id="health" name="health" type="number" min="0" step="1" required placeholder="Health" aria-label="Health">
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="submit">Preview JSON</button>
+            <button type="button" class="secondary" id="clear-button">Clear</button>
+          </div>
+          <div id="message" class="message" role="status" aria-live="polite"></div>
+        </form>
+      </section>
+
+      <section>
+        <h2>JSON Preview</h2>
+        <textarea id="json-preview" readonly spellcheck="false" aria-label="JSON preview"></textarea>
+        <div class="actions">
+          <button type="button" id="download-button">Download JSON</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const form = document.querySelector("#card-form");
+    const preview = document.querySelector("#json-preview");
+    const message = document.querySelector("#message");
+    const downloadButton = document.querySelector("#download-button");
+    const clearButton = document.querySelector("#clear-button");
+
+    function setMessage(text, type = "") {
+      message.textContent = text;
+      message.className = `message ${type}`.trim();
+    }
+
+    function getIntegerValue(id, label) {
+      const value = document.querySelector(`#${id}`).value;
+      if (!/^\d+$/.test(value)) {
+        throw new Error(`${label} 必須是非負整數。`);
+      }
+      return Number(value);
+    }
+
+    function buildCard() {
+      const cardId = document.querySelector("#card-id").value.trim();
+      const cardName = document.querySelector("#card-name").value.trim();
+      if (!cardId || !cardName) {
+        throw new Error("Card ID 和 Card Name 不可為空。 ");
+      }
+
+      return {
+        cardId,
+        cardName,
+        rarity: document.querySelector("#rarity").value,
+        race: document.querySelector("#race").value,
+        baseConfig: {
+          attack: getIntegerValue("attack", "Attack"),
+          defense: getIntegerValue("defense", "Defense"),
+          health: getIntegerValue("health", "Health")
+        },
+        skillConfig: {},
+        isEnabled: true
+      };
+    }
+
+    function updatePreview() {
+      try {
+        const card = buildCard();
+        preview.value = JSON.stringify(card, null, 2);
+        setMessage("JSON 預覽已更新。", "success");
+        return card;
+      } catch (error) {
+        setMessage(error.message, "error");
+        return null;
+      }
+    }
+
+    function safeFileName(name) {
+      return name.replace(/[\\/:*?"<>|]/g, "_").trim() || "card";
+    }
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      updatePreview();
+    });
+
+    downloadButton.addEventListener("click", () => {
+      const card = updatePreview();
+      if (!card) return;
+
+      const blob = new Blob(
+        [JSON.stringify(card, null, 2) + "\n"],
+        { type: "application/json;charset=utf-8" }
+      );
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${safeFileName(card.cardName)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setMessage(`已下載 ${link.download}`, "success");
+    });
+
+    clearButton.addEventListener("click", () => {
+      form.reset();
+      preview.value = "";
+      setMessage("");
+    });
+  </script>
+</body>
+</html>
