@@ -1,24 +1,20 @@
 package services
 
 import (
-	postgresDto "cardGame/dto/postgres"
-	"cardGame/model/constants"
+	"cardGame/feature/account"
 	"cardGame/model/packet"
-	postgresRepo "cardGame/repository/postgres"
 	"cardGame/utils"
 	"context"
-	"errors"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 type AccountService struct {
-	AccountRepo *postgresRepo.AccountRepo
+	AccountRepo account.AccountRepository
 }
 
-func NewAccountService(accountRepo *postgresRepo.AccountRepo) *AccountService {
+func NewAccountService(accountRepo account.AccountRepository) *AccountService {
 	return &AccountService{
 		AccountRepo: accountRepo,
 	}
@@ -27,14 +23,14 @@ func NewAccountService(accountRepo *postgresRepo.AccountRepo) *AccountService {
 // inner function
 func validateAccountID(accountId string) error {
 	if len(accountId) < 3 || len(accountId) > 20 {
-		return constants.ErrCodeAccountIDLength
+		return account.ErrAccountIDLength
 	}
 	return nil
 }
 
 func validatePassword(password string) error {
 	if len(password) < 8 || len(password) > 16 {
-		return constants.ErrCodePasswordLength
+		return account.ErrPasswordLength
 	}
 	return nil
 }
@@ -57,7 +53,7 @@ func (s *AccountService) CreateNewAccount(ctx context.Context, data *packet.Crea
 		return false, err
 	}
 
-	account := &postgresDto.Account{
+	account := &account.Account{
 		AccountId:    data.AccountId,
 		PasswordHash: string(passwordHash),
 		UID:          uuid.NewString(),
@@ -65,9 +61,6 @@ func (s *AccountService) CreateNewAccount(ctx context.Context, data *packet.Crea
 	}
 
 	if err := s.AccountRepo.CreateNewAccount(ctx, account); err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return false, constants.ErrCodeDuplicateKey
-		}
 		return false, err
 	}
 
@@ -76,17 +69,14 @@ func (s *AccountService) CreateNewAccount(ctx context.Context, data *packet.Crea
 
 func (s *AccountService) Login(ctx context.Context, data *packet.Login) (bool, string, error) {
 	utils.Log().Infof("login accountId: %s", data.AccountId)
-	account, err := s.AccountRepo.GetAccountByAccountId(ctx, data.AccountId)
+	accountData, err := s.AccountRepo.GetAccountByAccountId(ctx, data.AccountId)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, "", constants.ErrCodeInvalidAccountID
-		}
 		return false, "", err
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(account.PasswordHash), []byte(data.Password)); err != nil {
-		return false, "", constants.ErrCodeInvalidPassword
+	if err := bcrypt.CompareHashAndPassword([]byte(accountData.PasswordHash), []byte(data.Password)); err != nil {
+		return false, "", account.ErrInvalidPassword
 	}
 
-	return true, account.UID, nil
+	return true, accountData.UID, nil
 }

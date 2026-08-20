@@ -3,34 +3,52 @@ self create game
 
 ## target
 - use interface to create different card
-- have shop, summon, car list, battle with ai
+- have shop, summon, card list, battle with ai
 - level up system
 - save data in db or redis
 
 ## repos
+### server
 - database
     - 資料套件模組
 - dto
     - 資料庫表格結構
 - feature
-    - 各種功能
+    - 各個模組的最小功能
+    - 提供介面
+    - 核心處理邏輯
 - global
     - 環境參數結構
 - handler
-    - 與客端溝通的註冊封包
+    - Pitaya 對外入口
+    - request/response流程
 - model
-    - 全域通用的結構
+    - 跨層共用的資料模型與協定型別
 - modules
-    - 模組總管
+    - 建立 database、repository、service、handler
+    - 注入依賴
 - repository
-    - 資料表相關功能
+    - 實作feature的interface
+    - dto和feature entity的轉換
+    - 操作資料庫
 - services
-    - 各個功能的主要邏輯
-    - redis db等連線請求也在這
+    - 功能流程協調/驗證
 - utils
-    - 全專案共用的工具，不引用其他專案的package
-    - 控制初始化
+    - 全專案共用的基礎工具
+    - logger，環境變數，Pitaya 初始化與共用 helper
 
+### clients
+- Python tkinter 測試 client 與 Pitaya protocol
+
+### tools
+- card-editor
+    - 輸出卡片json
+
+### database
+- migration
+    - PostgreSQL schema migration
+- seed
+    - 各版本的卡片定義
 ## Python virtual environment
 
 前端測試工具使用 Python 虛擬環境，避免直接修改系統 Python。以下指令請在專案根目錄執行：
