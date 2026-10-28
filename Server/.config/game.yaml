@@ -11,7 +11,7 @@ logger:
   log-file: "true"
 postgres:
   host: "localhost"
-  port: "5433"
+  port: "5432"
   user: "tyszzz"
   password: "tyszzz"
   dbname: "tyszzz"

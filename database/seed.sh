@@ -19,7 +19,7 @@ if [ ! -d "$SEED_DIR" ]; then
     exit 1
 fi
 
-DATABASE_URL="${DATABASE_URL:-postgres://tyszzz:tyszzz@127.0.0.1:5433/tyszzz?sslmode=disable}"
+DATABASE_URL="${DATABASE_URL:-postgres://tyszzz:tyszzz@127.0.0.1:5432/tyszzz?sslmode=disable}"
 
 echo "Running seed version: $SEED_VERSION"
 

@@ -195,7 +195,7 @@ func (f *ConsoleFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	}
 
 	line := fmt.Sprintf(
-		"%s | %s | %s | %s\n",
+		"[%s][%s][%s] %s\n",
 		entry.Time.UTC().Format(f.TimestampFormat),
 		levelMap[entry.Level],
 		caller,

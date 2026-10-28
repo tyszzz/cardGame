@@ -6,7 +6,7 @@ from tkinter import messagebox, ttk
 
 from pitaya_client import PitayaClient
 
-HOST = "172.31.11.52"
+HOST = "127.0.0.1"
 PORT = 8080
 ACCOUNT_ID_PATTERN = re.compile(r"^[A-Za-z0-9]+$")
 PASSWORD_PATTERN = re.compile(r"^[A-Za-z0-9@#$%^&*()_+=!?.\-,]{1,16}$")
