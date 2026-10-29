@@ -10,6 +10,14 @@ HOST = "127.0.0.1"
 PORT = 8080
 RESULT_ACCOUNT_ALREADY_EXISTS = 3
 RESULT_NICKNAME_ALREADY_EXISTS = 4
+SUMMON_RESULT_MESSAGES = {
+	5: "Not logged in",
+	6: "Invalid summon type or times",
+	7: "Not enough currency",
+	8: "Summon failed on server",
+}
+SUMMON_TYPES = ("Normal", "Friend", "Diamond")
+SUMMON_TIMES = ("1", "10")
 NICKNAME_PATTERN = re.compile(r"^[A-Za-z0-9\u4e00-\u9fff]{2,12}$")
 ACCOUNT_ID_PATTERN = re.compile(r"^[A-Za-z0-9]+$")
 PASSWORD_PATTERN = re.compile(r"^[A-Za-z0-9@#$%^&*()_+=!?.\-,]{8,16}$")
@@ -33,6 +41,8 @@ class GameClientWindow:
 		self.uid = None
 		self.status = tk.StringVar(value="Disconnected")
 		self.game_status = tk.StringVar(value="Ready")
+		self.summon_type = tk.StringVar(value=SUMMON_TYPES[0])
+		self.summon_times = tk.StringVar(value=SUMMON_TIMES[0])
 		self.login_frame = None
 		self.register_frame = None
 		self.game_frame = None
@@ -294,12 +304,28 @@ class GameClientWindow:
 			text=f"Logged in as: {self.account_id.get().strip()}",
 		).grid(row=0, column=0, columnspan=2, pady=(0, 12))
 
+		summon_options = ttk.Frame(self.game_frame)
+		summon_options.grid(row=1, column=0, padx=(0, 8), pady=6)
+		ttk.Combobox(
+			summon_options,
+			textvariable=self.summon_type,
+			values=SUMMON_TYPES,
+			state="readonly",
+			width=8,
+		).grid(row=0, column=0, padx=(0, 4))
+		ttk.Combobox(
+			summon_options,
+			textvariable=self.summon_times,
+			values=SUMMON_TIMES,
+			state="readonly",
+			width=4,
+		).grid(row=0, column=1, padx=(0, 4))
 		self.summon_button = ttk.Button(
-			self.game_frame,
+			summon_options,
 			text="Summon",
 			command=self.summon,
 		)
-		self.summon_button.grid(row=1, column=0, padx=(0, 8), pady=6)
+		self.summon_button.grid(row=0, column=2)
 
 		ttk.Button(
 			self.game_frame,
@@ -332,12 +358,13 @@ class GameClientWindow:
 		self.game_status.set("Summoning...")
 		threading.Thread(
 			target=self._summon_in_background,
+			args=(int(self.summon_times.get()), self.summon_type.get()),
 			daemon=True,
 		).start()
 
-	def _summon_in_background(self):
+	def _summon_in_background(self, times: int, summon_type: str):
 		try:
-			result = self.client.summon(self.uid,1, "Normal")
+			result = self.client.summon(times, summon_type)
 			self.root.after(0, self._handle_summon_result, result)
 		except Exception as error:
 			self.root.after(0, self._show_summon_error, error)
@@ -346,7 +373,17 @@ class GameClientWindow:
 		self.action_in_progress = False
 		self.summon_button.configure(state="normal")
 		self.game_status.set("Ready")
-		self._append_result("Summon", result)
+		code = result.get("resultCode", 0) if isinstance(result, dict) else 0
+		if code != 0:
+			message = SUMMON_RESULT_MESSAGES.get(code, f"resultCode {code}")
+			self._append_result("Summon failed", message)
+			return
+		for card in result.get("cards", []):
+			if card.get("isNew"):
+				detail = "NEW"
+			else:
+				detail = f"duplicate -> {card.get('shardId')} x{card.get('shardAmount')}"
+			self._append_result("Summon", f"[{card.get('rarity')}] {card.get('cardName')} ({detail})")
 
 	def _show_summon_error(self, error: Exception):
 		self.action_in_progress = False

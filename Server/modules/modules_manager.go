@@ -30,7 +30,7 @@ func NewModulesManager() *ModulesManager {
 
 	// summon
 	mm.summonHandler = handler.NewSummonHandler(
-		services.NewSummonService(),
+		services.NewSummonService(postgresRepo.InitSummonRepo(db)),
 	)
 	return mm
 }
