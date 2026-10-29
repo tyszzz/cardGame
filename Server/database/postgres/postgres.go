@@ -22,7 +22,7 @@ func Init() *gorm.DB {
 			conf.Postgres.Port,
 		)
 	)
-	db, _err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, _err := gorm.Open(postgres.Open(dsn), &gorm.Config{TranslateError: true})
 	if _err != nil {
 		panic(fmt.Sprintf("failed to connect database %v", _err))
 	}

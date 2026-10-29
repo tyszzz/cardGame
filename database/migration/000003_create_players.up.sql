@@ -1,0 +1,18 @@
+CREATE TABLE IF NOT EXISTS players (
+    uid UUID PRIMARY KEY REFERENCES accounts(uid) ON DELETE CASCADE,
+    nickname VARCHAR(32) NOT NULL,
+    level INT NOT NULL DEFAULT 1,
+    vip_level INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_players_nickname_lower ON players (LOWER(nickname));
+
+CREATE TABLE IF NOT EXISTS player_currencies (
+    uid UUID NOT NULL REFERENCES players(uid) ON DELETE CASCADE,
+    currency_type SMALLINT NOT NULL,
+    amount BIGINT NOT NULL DEFAULT 0 CHECK (amount >= 0),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (uid, currency_type)
+);

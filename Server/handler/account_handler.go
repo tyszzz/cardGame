@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"cardGame/feature/account"
 	"cardGame/model/constants"
 	"cardGame/model/packet"
 	"cardGame/utils"
 	"context"
+	"errors"
 
 	"github.com/topfreegames/pitaya/v2/component"
 )
@@ -33,9 +35,16 @@ func (h *AccountHandler) CreateNewAccount(
 	createResult, err := h.as.CreateNewAccount(ctx, data)
 	if !createResult || err != nil {
 		utils.Log().Warnf("create new account failed, accountId: %s, err: %v", data.AccountId, err)
+		resultCode := int32(constants.CreateAccountFailed)
+		switch {
+		case errors.Is(err, account.ErrDuplicateKey):
+			resultCode = constants.AccountAlreadyExists
+		case errors.Is(err, account.ErrNicknameDuplicateKey):
+			resultCode = constants.NicknameAlreadyExists
+		}
 		return &packet.CreateAccountResult{
 			BaseResult: packet.BaseResult{
-				ResultCode: constants.CreateAccountFailed,
+				ResultCode: resultCode,
 			},
 			AccountId: data.AccountId,
 		}, nil

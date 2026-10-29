@@ -7,6 +7,7 @@ type (
 	CreateNewAccount struct {
 		AccountId string `json:"accountId"`
 		Password  string `json:"password"`
+		Nickname  string `json:"nickname"`
 	}
 
 	Login struct {

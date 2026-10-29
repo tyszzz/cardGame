@@ -78,12 +78,13 @@ class PitayaClient:
             },
         )
 
-    def create_account(self, account_id: str, password: str) -> object:
+    def create_account(self, account_id: str, password: str, nickname: str) -> object:
         return self.request(
             "AccountHandler.CreateNewAccount",
             {
                 "accountId": account_id,
                 "password": password,
+                "nickname": nickname,
             },
         )
 

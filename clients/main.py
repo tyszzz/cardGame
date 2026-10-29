@@ -8,8 +8,11 @@ from pitaya_client import PitayaClient
 
 HOST = "127.0.0.1"
 PORT = 8080
+RESULT_ACCOUNT_ALREADY_EXISTS = 3
+RESULT_NICKNAME_ALREADY_EXISTS = 4
+NICKNAME_PATTERN = re.compile(r"^[A-Za-z0-9\u4e00-\u9fff]{2,12}$")
 ACCOUNT_ID_PATTERN = re.compile(r"^[A-Za-z0-9]+$")
-PASSWORD_PATTERN = re.compile(r"^[A-Za-z0-9@#$%^&*()_+=!?.\-,]{1,16}$")
+PASSWORD_PATTERN = re.compile(r"^[A-Za-z0-9@#$%^&*()_+=!?.\-,]{8,16}$")
 
 class GameClientWindow:
 	def __init__(self, root: tk.Tk):
@@ -26,6 +29,7 @@ class GameClientWindow:
 		self.password = tk.StringVar()
 		self.register_account_id = tk.StringVar()
 		self.register_password = tk.StringVar()
+		self.register_nickname = tk.StringVar()
 		self.uid = None
 		self.status = tk.StringVar(value="Disconnected")
 		self.game_status = tk.StringVar(value="Ready")
@@ -102,22 +106,31 @@ class GameClientWindow:
 			show="*",
 		).grid(row=1, column=1, pady=6)
 
+		tk.Label(self.register_frame, text="Nickname").grid(
+			row=2, column=0, padx=(0, 8), pady=6, sticky="w"
+		)
+		tk.Entry(
+			self.register_frame,
+			textvariable=self.register_nickname,
+			width=28,
+		).grid(row=2, column=1, pady=6)
+
 		self.register_button = ttk.Button(
 			self.register_frame,
 			text="Create account",
 			command=self.create_account,
 		)
-		self.register_button.grid(row=2, column=0, columnspan=2, pady=(12, 6))
+		self.register_button.grid(row=3, column=0, columnspan=2, pady=(12, 6))
 
 		ttk.Button(
 			self.register_frame,
 			text="Back to login",
 			command=self.show_login_frame,
-		).grid(row=3, column=0, columnspan=2, pady=6)
+		).grid(row=4, column=0, columnspan=2, pady=6)
 
 		self.register_status = tk.StringVar(value="")
 		ttk.Label(self.register_frame, textvariable=self.register_status).grid(
-			row=4, column=0, columnspan=2, pady=6
+			row=5, column=0, columnspan=2, pady=6
 		)
 
 	def show_register_frame(self):
@@ -133,21 +146,28 @@ class GameClientWindow:
 	def create_account(self):
 		account_id = self.register_account_id.get().strip()
 		password = self.register_password.get()
+		nickname = self.register_nickname.get().strip()
 		if not self._validate_credentials(account_id, password):
+			return
+		if not NICKNAME_PATTERN.fullmatch(nickname):
+			messagebox.showwarning(
+				"Invalid nickname",
+				"Nickname must be 2-12 characters: English letters, numbers or Chinese characters.",
+			)
 			return
 
 		self.register_button.configure(state="disabled")
 		self.register_status.set("Creating account...")
 		threading.Thread(
 			target=self._create_account_in_background,
-			args=(account_id, password),
+			args=(account_id, password, nickname),
 			daemon=True,
 		).start()
 
-	def _create_account_in_background(self, account_id: str, password: str):
+	def _create_account_in_background(self, account_id: str, password: str, nickname: str):
 		try:
 			self.client.connect()
-			result = self.client.create_account(account_id, password)
+			result = self.client.create_account(account_id, password, nickname)
 			self.root.after(0, self._show_create_account_result, result)
 		except Exception as error:
 			self.root.after(0, self._show_create_account_error, error)
@@ -158,6 +178,7 @@ class GameClientWindow:
 			self.client.close()
 			self.register_account_id.set("")
 			self.register_password.set("")
+			self.register_nickname.set("")
 			self.register_status.set("")
 			self.account_id.set(result.get("accountId", ""))
 			self.show_login_frame()
@@ -181,6 +202,10 @@ class GameClientWindow:
 	def _get_result_error(self, result: object) -> str:
 		if not isinstance(result, dict):
 			return str(result)
+		if result.get("resultCode") == RESULT_ACCOUNT_ALREADY_EXISTS:
+			return "This account ID already exists."
+		if result.get("resultCode") == RESULT_NICKNAME_ALREADY_EXISTS:
+			return "This nickname is already taken."
 		return f"Server rejected the request. resultCode={result.get('resultCode')}"
 
 	def login(self):
