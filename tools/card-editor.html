@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Card JSON Editor</title>
+  <title>卡片 JSON 編輯器</title>
   <style>
     :root {
       color-scheme: dark;
@@ -173,26 +173,26 @@
 <body>
   <main>
     <header>
-      <h1>Card JSON Editor</h1>
+      <h1>卡片 JSON 編輯器</h1>
       <p>輸入一張卡片的定義，預覽後下載成 JSON seed 檔案。</p>
     </header>
 
     <div class="layout">
       <section>
-        <h2>Card Definition</h2>
+        <h2>卡片定義</h2>
         <form id="card-form" novalidate>
           <div class="field">
-            <label for="card-id">Card ID</label>
+            <label for="card-id">卡片 ID</label>
             <input id="card-id" name="cardId" required maxlength="64" placeholder="card_001">
           </div>
 
           <div class="field">
-            <label for="card-name">Card Name</label>
+            <label for="card-name">卡片名稱</label>
             <input id="card-name" name="cardName" required maxlength="100" placeholder="Test Card">
           </div>
 
           <div class="field">
-            <label for="rarity">Rarity</label>
+            <label for="rarity">稀有度</label>
             <select id="rarity" name="rarity" required>
               <option value="R">R</option>
               <option value="SR">SR</option>
@@ -202,30 +202,30 @@
           </div>
 
           <div class="field">
-            <label for="race">Race</label>
+            <label for="race">種族</label>
             <select id="race" name="race" required>
-              <option value="Human">Human</option>
-              <option value="Immortal">Immortal</option>
-              <option value="Demon">Demon</option>
-              <option value="Dragon">Dragon</option>
-              <option value="Hybrid">Hybrid</option>
+              <option value="Human">人族 (Human)</option>
+              <option value="Xian">仙族 (Xian)</option>
+              <option value="Mo">魔族 (Mo)</option>
+              <option value="Dragon">龍族 (Dragon)</option>
+              <option value="Hybrid">雜種 (Hybrid)</option>
             </select>
           </div>
 
           <div class="field">
-            <label>Base Config</label>
+            <label>基本屬性</label>
             <div class="stats">
-              <input id="attack" name="attack" type="number" min="0" step="1" required placeholder="Attack" aria-label="Attack">
-              <input id="defense" name="defense" type="number" min="0" step="1" required placeholder="Defense" aria-label="Defense">
-              <input id="health" name="health" type="number" min="0" step="1" required placeholder="Health" aria-label="Health">
-              <input id="attack-ratio" name="attackRatio" type="number" min="0" step="any" required placeholder="Attack Ratio" aria-label="Attack Ratio">
-              <input id="defense-ratio" name="defenseRatio" type="number" min="0" step="any" required placeholder="Defense Ratio" aria-label="Defense Ratio">
-              <input id="health-ratio" name="healthRatio" type="number" min="0" step="any" required placeholder="Health Ratio" aria-label="Health Ratio">
+              <input id="attack" name="attack" type="number" min="0" step="1" required placeholder="攻擊力" aria-label="攻擊力">
+              <input id="defense" name="defense" type="number" min="0" step="1" required placeholder="防禦力" aria-label="防禦力">
+              <input id="health" name="health" type="number" min="0" step="1" required placeholder="生命值" aria-label="生命值">
+              <input id="attack-ratio" name="attackRatio" type="number" min="0" step="any" required placeholder="攻擊成長率" aria-label="攻擊成長率">
+              <input id="defense-ratio" name="defenseRatio" type="number" min="0" step="any" required placeholder="防禦成長率" aria-label="防禦成長率">
+              <input id="health-ratio" name="healthRatio" type="number" min="0" step="any" required placeholder="生命成長率" aria-label="生命成長率">
             </div>
           </div>
 
           <div class="field">
-            <label>Skills</label>
+            <label>技能</label>
             <div id="skills-fixed" class="skill-list"></div>
             <div id="skills-talent-wrap" hidden>
               <div class="skill-group-title">天賦技能（SSR 3 個、UR 4 個）</div>
@@ -234,22 +234,22 @@
           </div>
 
           <div class="field">
-            <label class="checkbox"><input id="is-enabled" name="isEnabled" type="checkbox" checked> Enabled</label>
+            <label class="checkbox"><input id="is-enabled" name="isEnabled" type="checkbox" checked> 啟用</label>
           </div>
 
           <div class="actions">
-            <button type="submit">Preview JSON</button>
-            <button type="button" class="secondary" id="clear-button">Clear</button>
+            <button type="submit">預覽 JSON</button>
+            <button type="button" class="secondary" id="clear-button">清除</button>
           </div>
           <div id="message" class="message" role="status" aria-live="polite"></div>
         </form>
       </section>
 
       <section class="preview-panel">
-        <h2>JSON Preview</h2>
-        <textarea id="json-preview" readonly spellcheck="false" aria-label="JSON preview"></textarea>
+        <h2>JSON 預覽</h2>
+        <textarea id="json-preview" readonly spellcheck="false" aria-label="JSON 預覽"></textarea>
         <div class="actions">
-          <button type="button" id="download-button">Download JSON</button>
+          <button type="button" id="download-button">下載 JSON</button>
         </div>
       </section>
     </div>
@@ -561,7 +561,7 @@
       const cardId = document.querySelector("#card-id").value.trim();
       const cardName = document.querySelector("#card-name").value.trim();
       if (!cardId || !cardName) {
-        throw new Error("Card ID 和 Card Name 不可為空。 ");
+        throw new Error("卡片 ID 和卡片名稱不可為空。");
       }
 
       return {
@@ -570,12 +570,12 @@
         rarity: document.querySelector("#rarity").value,
         race: document.querySelector("#race").value,
         baseConfig: {
-          attack: getIntegerValue("attack", "Attack"),
-          attackRatio: getRatioValue("attack-ratio", "Attack Ratio"),
-          defense: getIntegerValue("defense", "Defense"),
-          defenseRatio: getRatioValue("defense-ratio", "Defense Ratio"),
-          health: getIntegerValue("health", "Health"),
-          healthRatio: getRatioValue("health-ratio", "Health Ratio")
+          attack: getIntegerValue("attack", "攻擊力"),
+          attackRatio: getRatioValue("attack-ratio", "攻擊成長率"),
+          defense: getIntegerValue("defense", "防禦力"),
+          defenseRatio: getRatioValue("defense-ratio", "防禦成長率"),
+          health: getIntegerValue("health", "生命值"),
+          healthRatio: getRatioValue("health-ratio", "生命成長率")
         },
         skillConfig: buildSkillConfig(),
         isEnabled: document.querySelector("#is-enabled").checked

@@ -9,27 +9,27 @@ import (
 type Race int
 
 const (
-	RaceHuman    Race = 1 // 人族
-	RaceImmortal Race = 2 // 仙族
-	RaceDemon    Race = 3 // 魔族
-	RaceDragon   Race = 4 // 龍族
-	RaceHybrid   Race = 5 // 雜種
+	RaceHuman  Race = 1 // 人族
+	RaceXian   Race = 2 // 仙族
+	RaceMo     Race = 3 // 魔族
+	RaceDragon Race = 4 // 龍族
+	RaceHybrid Race = 5 // 雜種
 )
 
 var raceValueToName = map[Race]string{
-	RaceHuman:    "Human",
-	RaceImmortal: "Immortal",
-	RaceDemon:    "Demon",
-	RaceDragon:   "Dragon",
-	RaceHybrid:   "Hybrid",
+	RaceHuman:  "Human",
+	RaceXian:   "Xian",
+	RaceMo:     "Mo",
+	RaceDragon: "Dragon",
+	RaceHybrid: "Hybrid",
 }
 
 var raceNameToValue = map[string]Race{
-	"Human":    RaceHuman,
-	"Immortal": RaceImmortal,
-	"Demon":    RaceDemon,
-	"Dragon":   RaceDragon,
-	"Hybrid":   RaceHybrid,
+	"Human":  RaceHuman,
+	"Xian":   RaceXian,
+	"Mo":     RaceMo,
+	"Dragon": RaceDragon,
+	"Hybrid": RaceHybrid,
 }
 
 func (r Race) String() string {
