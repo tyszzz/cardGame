@@ -2,21 +2,10 @@
 
 卡牌放置遊戲：Go 後端 + Python tkinter 測試前端。詳細背景與進度見 @docs/project-context.md，目錄說明見 @README.md。
 
-## 合作規則
-
-- 使用繁體中文回答，先給結論，再說明原因、取捨與實作細節。
-- 預設只分析與提供建議，不主動修改程式碼。
-- 需要修改時，先說明：要改哪些檔案、每個檔案的調整內容、修改原因、可能影響、驗證方式。**使用者明確回覆 `OK` 後才能修改。**
-- 使用者只是詢問概念或架構時，不要建立檔案或修改程式。
-- 以既有架構與程式碼為優先，不任意引入新框架或重構；有更好的方案時提出替代方案，並說明效能、維護成本、複雜度與遷移代價。
-- 先指出問題根因再給修正方向；修正根因，不用只掩蓋問題的 workaround；修改保持最小範圍，不處理無關 bug。
-- 不要覆蓋或撤銷使用者未要求的既有變更（工作區可能有未提交的修改）。
-
 ## 技術棧
 
-- Backend：Go 1.23（toolchain 1.24.5），Pitaya v2 + WebSocket，PostgreSQL + GORM，未來可能加入 Redis
+- Backend：Go 1.25（以 `Server/go.mod` 為準），Pitaya v2 + WebSocket，PostgreSQL + GORM，未來可能加入 Redis
 - Test client：Python tkinter + `websocket-client`（使用專案根目錄 `.venv`）
-- 環境以 Alpine Linux 為準（套件用 `apk`，libc 為 musl）。glibc binary 在此環境會有相容性問題（例如舊的 `postgrator`）
 
 ## 專案結構
 
@@ -60,7 +49,7 @@ cd Server && go build ./... && go test ./...
 source .venv/bin/activate && python clients/main.py
 ```
 
-資料庫（兩支腳本皆以 `DATABASE_URL` 環境變數覆寫連線，預設 `postgres://tyszzz:tyszzz@127.0.0.1:5432/tyszzz?sslmode=disable`）：
+資料庫（兩支腳本皆以 `DATABASE_URL` 環境變數指定連線）：
 
 ```bash
 database/migration.sh        # 執行 database/migration 下的 up migration（使用 database/migrate）
