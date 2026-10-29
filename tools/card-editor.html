@@ -29,7 +29,7 @@
     }
 
     main {
-      width: min(960px, calc(100% - 32px));
+      width: min(1200px, calc(100% - 32px));
       margin: 32px auto;
     }
 
@@ -39,9 +39,14 @@
 
     .layout {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
       gap: 16px;
+      align-items: start;
     }
+
+    .preview-panel { position: sticky; top: 16px; }
+
+    [hidden] { display: none !important; }
 
     section {
       padding: 20px;
@@ -76,6 +81,9 @@
       gap: 10px;
     }
 
+    label.checkbox { display: flex; align-items: center; gap: 8px; margin-bottom: 0; }
+    label.checkbox input { width: auto; }
+
     .actions {
       display: flex;
       flex-wrap: wrap;
@@ -106,6 +114,44 @@
       line-height: 1.5;
     }
 
+    .skill-list { display: grid; gap: 10px; margin-bottom: 10px; }
+    .skill-list:empty { display: none; }
+    .skill-group-title { margin: 6px 0 -4px; color: var(--muted); font-size: 0.9rem; }
+
+    details.skill {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+    }
+
+    details.skill > summary {
+      padding: 10px 12px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .skill-body { display: grid; gap: 10px; padding: 0 12px 12px; }
+    .skill-body textarea { min-height: 60px; font-family: inherit; font-size: 1rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .skill-body label, .effect label { font-size: 0.85rem; color: var(--muted); }
+    .skill-body .field, .effect .field { margin-bottom: 0; }
+
+    .effects { display: grid; gap: 8px; }
+
+    .effect {
+      display: grid;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel);
+    }
+
+    .effect-header { display: flex; align-items: center; justify-content: space-between; font-weight: 700; }
+    button.small { padding: 4px 10px; font-size: 0.85rem; }
+    button.add-effect { justify-self: start; }
+
     .message {
       min-height: 1.4em;
       margin-top: 12px;
@@ -119,6 +165,8 @@
       main { margin: 20px auto; }
       .layout { grid-template-columns: 1fr; }
       .stats { grid-template-columns: 1fr; }
+      .grid-3, .grid-2 { grid-template-columns: 1fr; }
+      .preview-panel { position: static; }
     }
   </style>
 </head>
@@ -170,7 +218,23 @@
               <input id="attack" name="attack" type="number" min="0" step="1" required placeholder="Attack" aria-label="Attack">
               <input id="defense" name="defense" type="number" min="0" step="1" required placeholder="Defense" aria-label="Defense">
               <input id="health" name="health" type="number" min="0" step="1" required placeholder="Health" aria-label="Health">
+              <input id="attack-ratio" name="attackRatio" type="number" min="0" step="any" required placeholder="Attack Ratio" aria-label="Attack Ratio">
+              <input id="defense-ratio" name="defenseRatio" type="number" min="0" step="any" required placeholder="Defense Ratio" aria-label="Defense Ratio">
+              <input id="health-ratio" name="healthRatio" type="number" min="0" step="any" required placeholder="Health Ratio" aria-label="Health Ratio">
             </div>
+          </div>
+
+          <div class="field">
+            <label>Skills</label>
+            <div id="skills-fixed" class="skill-list"></div>
+            <div id="skills-talent-wrap" hidden>
+              <div class="skill-group-title">天賦技能（SSR 3 個、UR 4 個）</div>
+              <div id="skills-talent" class="skill-list"></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="checkbox"><input id="is-enabled" name="isEnabled" type="checkbox" checked> Enabled</label>
           </div>
 
           <div class="actions">
@@ -181,7 +245,7 @@
         </form>
       </section>
 
-      <section>
+      <section class="preview-panel">
         <h2>JSON Preview</h2>
         <textarea id="json-preview" readonly spellcheck="false" aria-label="JSON preview"></textarea>
         <div class="actions">
@@ -198,6 +262,279 @@
     const downloadButton = document.querySelector("#download-button");
     const clearButton = document.querySelector("#clear-button");
 
+    // 選項需與 Server/model/constants 的 skill_*.go 保持一致。
+    const ENUMS = {
+      trigger: [["BeforeRoundStart", "回合開始前"], ["RoundEnd", "回合結束時"], ["BeforeAction", "行動前"], ["AfterAction", "行動後"]],
+      target: [["Single", "單體"], ["Random3", "隨機3人"], ["All", "全體"], ["FrontRow", "前排"], ["BackRow", "後排"], ["Column", "縱排"]],
+      effectType: [["Damage", "傷害"], ["Status", "狀態"], ["Heal", "回血"], ["Buff", "增減屬性"]],
+      stat: [["Health", "生命"], ["Attack", "攻擊"], ["Defense", "防禦"]],
+      status: [["Poison", "中毒"], ["Burn", "燃燒"], ["Stun", "暈眩"]],
+      damageType: [["Physical", "物理"], ["Magic", "魔法"], ["True", "真實"]],
+      side: [["Enemy", "敵方"], ["Ally", "我方"], ["Self", "自己"]]
+    };
+    const TALENT_COUNT = { SSR: 3, UR: 4 };
+    const FIXED_SKILLS = [["normalAtk", "普通攻擊"], ["activeSkill", "主動技能"], ["passiveSkill", "被動技能"]];
+    const DOT_STATUSES = ["Poison", "Burn"];
+    // 效果欄位的顯示與輸出順序
+    const EFFECT_FIELDS = [
+      ["damageType", "傷害類型", "damageType"],
+      ["stat", "屬性", "stat"],
+      ["status", "狀態", "status"],
+      ["scaleStat", "基準屬性（施放者）", "stat"],
+      ["value", "數值（%）"],
+      ["duration", "持續回合"],
+      ["maxStack", "可疊加層數（選填）"]
+    ];
+
+    const skillsFixed = document.querySelector("#skills-fixed");
+    const skillsTalent = document.querySelector("#skills-talent");
+    const skillsTalentWrap = document.querySelector("#skills-talent-wrap");
+    const raritySelect = document.querySelector("#rarity");
+    let prevRarity = raritySelect.value;
+
+    function el(tag, props = {}, children = []) {
+      const node = document.createElement(tag);
+      Object.assign(node, props);
+      node.append(...children);
+      return node;
+    }
+
+    function makeSelect(enumKey, blankLabel) {
+      const select = el("select");
+      select.append(el("option", { value: "", textContent: blankLabel }));
+      for (const [value, label] of ENUMS[enumKey]) {
+        select.append(el("option", { value, textContent: `${label} (${value})` }));
+      }
+      return select;
+    }
+
+    function labeled(text, control) {
+      return el("div", { className: "field" }, [el("label", { textContent: text }), control]);
+    }
+
+    function effectFieldsFor(type, status) {
+      switch (type) {
+        case "Damage": return ["damageType", "scaleStat", "value"];
+        case "Heal": return ["scaleStat", "value"];
+        case "Buff": return ["stat", "value", "duration", "maxStack"];
+        case "Status":
+          if (!status) return ["status"];
+          return DOT_STATUSES.includes(status)
+            ? ["status", "scaleStat", "value", "duration", "maxStack"]
+            : ["status", "duration", "maxStack"];
+        default: return [];
+      }
+    }
+
+    function createEffect(effectsEl) {
+      const refs = {
+        type: makeSelect("effectType", "請選擇"),
+        side: makeSelect("side", "請選擇"),
+        target: makeSelect("target", "沿用技能目標")
+      };
+      const wrappers = {};
+      const title = el("span");
+      const removeButton = el("button", { type: "button", className: "secondary small", textContent: "刪除效果" });
+      const node = el("div", { className: "effect" }, [
+        el("div", { className: "effect-header" }, [title, removeButton]),
+        el("div", { className: "grid-3" }, [
+          labeled("效果類型", refs.type),
+          labeled("作用陣營", refs.side),
+          (wrappers.target = labeled("目標形狀", refs.target))
+        ])
+      ]);
+
+      const fieldGrid = el("div", { className: "grid-3" });
+      for (const [key, label, enumKey] of EFFECT_FIELDS) {
+        refs[key] = enumKey ? makeSelect(enumKey, "請選擇") : el("input", { type: "number", step: "1" });
+        wrappers[key] = labeled(label, refs[key]);
+        fieldGrid.append(wrappers[key]);
+      }
+      node.append(fieldGrid);
+
+      function refresh() {
+        const visible = effectFieldsFor(refs.type.value, refs.status.value);
+        for (const [key] of EFFECT_FIELDS) wrappers[key].hidden = !visible.includes(key);
+        wrappers.target.hidden = refs.side.value === "Self";
+      }
+      for (const key of ["type", "side", "status"]) refs[key].addEventListener("change", refresh);
+      removeButton.addEventListener("click", () => {
+        node.remove();
+        renumberEffects(effectsEl);
+      });
+
+      node._refs = refs;
+      node._title = title;
+      refresh();
+      return node;
+    }
+
+    function renumberEffects(effectsEl) {
+      [...effectsEl.children].forEach((node, i) => { node._title.textContent = `效果 #${i + 1}`; });
+    }
+
+    function addEffect(effectsEl) {
+      effectsEl.append(createEffect(effectsEl));
+      renumberEffects(effectsEl);
+    }
+
+    function createSkill(title, talent) {
+      const refs = {
+        name: el("input", { maxLength: 100, placeholder: "技能名稱" }),
+        desc: el("textarea", { rows: 2, placeholder: "技能描述" }),
+        trigger: makeSelect("trigger", "請選擇"),
+        target: makeSelect("target", "（無）")
+      };
+      const effectsEl = el("div", { className: "effects" });
+      const addButton = el("button", { type: "button", className: "secondary small add-effect", textContent: "新增效果" });
+      addButton.addEventListener("click", () => addEffect(effectsEl));
+
+      const body = el("div", { className: "skill-body" }, [
+        el("div", { className: "grid-3" }, [
+          labeled("名稱", refs.name),
+          labeled("觸發時機", refs.trigger),
+          labeled("預設目標形狀", refs.target)
+        ]),
+        labeled("描述", refs.desc)
+      ]);
+      if (talent) {
+        refs.star = el("input", { type: "number", min: "0", step: "1", placeholder: "星數" });
+        refs.level = el("input", { type: "number", min: "0", step: "1", placeholder: "等級" });
+        body.append(el("div", { className: "grid-2" }, [labeled("解鎖星數", refs.star), labeled("解鎖等級", refs.level)]));
+      }
+      body.append(effectsEl, addButton);
+
+      const node = el("details", { className: "skill", open: true }, [el("summary", { textContent: title }), body]);
+      node._refs = refs;
+      node._effectsEl = effectsEl;
+      addEffect(effectsEl);
+      return node;
+    }
+
+    function skillHasContent(node) {
+      const r = node._refs;
+      return Boolean(r.name.value || r.desc.value || r.star?.value || r.level?.value ||
+        [...node._effectsEl.children].some((e) => e._refs.type.value));
+    }
+
+    // 依稀有度補齊或移除天賦區塊；使用者取消移除時回傳 false。
+    function syncTalents() {
+      const needed = TALENT_COUNT[raritySelect.value] || 0;
+      const blocks = [...skillsTalent.children];
+      if (blocks.length > needed) {
+        const removed = blocks.slice(needed);
+        if (removed.some(skillHasContent) && !confirm("切換稀有度會移除已填寫的天賦，確定嗎？")) return false;
+        removed.forEach((node) => node.remove());
+      }
+      for (let i = skillsTalent.children.length; i < needed; i++) {
+        skillsTalent.append(createSkill(`天賦 ${i + 1}`, true));
+      }
+      skillsTalentWrap.hidden = needed === 0;
+      return true;
+    }
+
+    function resetSkills() {
+      skillsFixed.replaceChildren(...FIXED_SKILLS.map(([, label]) => createSkill(label, false)));
+      skillsTalent.replaceChildren();
+      syncTalents();
+    }
+
+    function readInt(input, label, { min = 0, nonZero = false, allowNegative = false } = {}) {
+      const text = input.value.trim();
+      if (!/^-?\d+$/.test(text)) throw new Error(`${label} 必須是整數。`);
+      const number = Number(text);
+      if (!allowNegative && number < 0) throw new Error(`${label} 不可為負數。`);
+      if (!allowNegative && number < min) throw new Error(`${label} 必須大於或等於 ${min}。`);
+      if (nonZero && number === 0) throw new Error(`${label} 不可為 0。`);
+      return number;
+    }
+
+    function readEffect(refs, skillTarget) {
+      const type = refs.type.value;
+      if (!type) throw new Error("請選擇效果類型。");
+      const side = refs.side.value;
+      if (!side) throw new Error("請選擇作用陣營。");
+
+      const effect = { type, side };
+      if (side !== "Self") {
+        if (refs.target.value) effect.target = refs.target.value;
+        else if (!skillTarget) throw new Error("請指定目標形狀（效果或技能的預設目標）。");
+      }
+
+      const visible = effectFieldsFor(type, refs.status.value);
+      for (const [key, label, enumKey] of EFFECT_FIELDS) {
+        if (!visible.includes(key)) continue;
+        if (enumKey) {
+          if (!refs[key].value) throw new Error(`請選擇${label}。`);
+          effect[key] = refs[key].value;
+        } else if (key === "value") {
+          effect.value = type === "Buff"
+            ? readInt(refs.value, label, { allowNegative: true, nonZero: true })
+            : readInt(refs.value, label, { min: 1 });
+        } else if (key === "duration") {
+          effect.duration = readInt(refs.duration, label, { min: 1 });
+        } else if (refs.maxStack.value.trim() !== "") {
+          const maxStack = readInt(refs.maxStack, label);
+          if (maxStack > 0) effect.maxStack = maxStack;
+        }
+      }
+      return effect;
+    }
+
+    function readSkill(node, talent) {
+      const r = node._refs;
+      const name = r.name.value.trim();
+      if (!name) throw new Error("名稱不可為空。");
+      if (!r.trigger.value) throw new Error("請選擇觸發時機。");
+
+      const skill = { name, desc: r.desc.value.trim(), trigger: r.trigger.value };
+      if (r.target.value) skill.target = r.target.value;
+      if (talent) {
+        const star = r.star.value.trim() === "" ? 0 : readInt(r.star, "解鎖星數");
+        const level = r.level.value.trim() === "" ? 0 : readInt(r.level, "解鎖等級");
+        if (star === 0 && level === 0) throw new Error("天賦必須設定解鎖星數或等級。");
+        skill.unlock = {};
+        if (star > 0) skill.unlock.star = star;
+        if (level > 0) skill.unlock.level = level;
+      }
+
+      const effectNodes = [...node._effectsEl.children];
+      if (effectNodes.length === 0) throw new Error("至少需要一個效果。");
+      skill.effects = effectNodes.map((effectNode, i) => {
+        try {
+          return readEffect(effectNode._refs, skill.target);
+        } catch (error) {
+          throw new Error(`效果 #${i + 1}：${error.message}`);
+        }
+      });
+      return skill;
+    }
+
+    function readSkillWithLabel(node, label, talent) {
+      try {
+        return readSkill(node, talent);
+      } catch (error) {
+        throw new Error(`${label}：${error.message}`);
+      }
+    }
+
+    function buildSkillConfig() {
+      const config = {};
+      FIXED_SKILLS.forEach(([key, label], i) => {
+        config[key] = readSkillWithLabel(skillsFixed.children[i], label, false);
+      });
+      const needed = TALENT_COUNT[raritySelect.value] || 0;
+      if (skillsTalent.children.length !== needed) throw new Error(`${raritySelect.value} 需要 ${needed} 個天賦。`);
+      config.talentSkill = [...skillsTalent.children].map((node, i) => readSkillWithLabel(node, `天賦 ${i + 1}`, true));
+      return config;
+    }
+
+    raritySelect.addEventListener("change", () => {
+      if (syncTalents()) prevRarity = raritySelect.value;
+      else raritySelect.value = prevRarity;
+    });
+    resetSkills();
+
     function setMessage(text, type = "") {
       message.textContent = text;
       message.className = `message ${type}`.trim();
@@ -209,6 +546,15 @@
         throw new Error(`${label} 必須是非負整數。`);
       }
       return Number(value);
+    }
+
+    function getRatioValue(id, label) {
+      const value = document.querySelector(`#${id}`).value.trim();
+      const number = Number(value);
+      if (value === "" || !Number.isFinite(number) || number < 0) {
+        throw new Error(`${label} 必須是非負數字。`);
+      }
+      return number;
     }
 
     function buildCard() {
@@ -225,11 +571,14 @@
         race: document.querySelector("#race").value,
         baseConfig: {
           attack: getIntegerValue("attack", "Attack"),
+          attackRatio: getRatioValue("attack-ratio", "Attack Ratio"),
           defense: getIntegerValue("defense", "Defense"),
-          health: getIntegerValue("health", "Health")
+          defenseRatio: getRatioValue("defense-ratio", "Defense Ratio"),
+          health: getIntegerValue("health", "Health"),
+          healthRatio: getRatioValue("health-ratio", "Health Ratio")
         },
-        skillConfig: {},
-        isEnabled: true
+        skillConfig: buildSkillConfig(),
+        isEnabled: document.querySelector("#is-enabled").checked
       };
     }
 
@@ -265,7 +614,7 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${safeFileName(card.cardName)}.json`;
+      link.download = `${safeFileName(card.cardId)}.json`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -275,6 +624,8 @@
 
     clearButton.addEventListener("click", () => {
       form.reset();
+      prevRarity = raritySelect.value;
+      resetSkills();
       preview.value = "";
       setMessage("");
     });

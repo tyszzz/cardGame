@@ -1,5 +1,7 @@
 package cards
 
+import "cardGame/model/constants"
+
 type (
 	BaseConfig struct {
 		Attack       int     `json:"attack"`
@@ -18,19 +20,12 @@ type (
 	}
 
 	SkillDefinition struct {
-		Name      string        `json:"name"`                // 技能名字
-		Desc      string        `json:"desc"`                // 技能描述
-		Trigger   string        `json:"trigger"`             // 觸發方式
-		Target    string        `json:"target"`              // 目標對象
-		Condition *Condition    `json:"condition,omitempty"` // 觸發條件
-		Unlock    *UnlockRule   `json:"unlock,omitempty"`    // 解鎖條件
-		Effects   []SkillEffect `json:"effects"`             // 技能效果
-	}
-
-	// 觸發條件
-	Condition struct {
-		Value float64 `json:"value,omitempty"` // 閾值
-		Once  bool    `json:"once,omitempty"`  // 是否只觸發一次
+		Name    string            `json:"name"`              // 技能名字
+		Desc    string            `json:"desc"`              // 技能描述
+		Trigger constants.Trigger `json:"trigger,omitempty"` // 觸發時機
+		Target  constants.Target  `json:"target,omitempty"`  // 預設目標形狀，效果未指定時沿用
+		Unlock  *UnlockRule       `json:"unlock,omitempty"`  // 解鎖條件
+		Effects []SkillEffect     `json:"effects"`           // 技能效果
 	}
 
 	// 解鎖條件
@@ -39,15 +34,17 @@ type (
 		Level int `json:"level,omitempty"` // 解鎖等級
 	}
 
-	// 技能效果
+	// 技能效果，Value 皆為百分比整數(150 代表 150%)
 	SkillEffect struct {
-		Type       string `json:"type"`                 // 效果類型
-		Stat       string `json:"stat,omitempty"`       // buff影響的屬性(扣攻,扣防等)
-		Status     string `json:"status,omitempty"`     // buff影響狀態(中毒,燃燒等)
-		DamageType string `json:"damageType,omitempty"` // 傷害類型(物理,魔法等)
-		Target     string `json:"target,omitempty"`     // 作用對象
-		Value      int    `json:"value,omitempty"`      // 效果數值
-		Duration   int    `json:"duration,omitempty"`   // 持續回合
-		MaxStack   int    `json:"maxStack,omitempty"`   // 可疊加層數
+		Type       constants.EffectType `json:"type,omitempty"`       // 效果類型
+		Side       constants.Side       `json:"side,omitempty"`       // 作用陣營(敵方,我方,自己)
+		Target     constants.Target     `json:"target,omitempty"`     // 作用目標形狀，未填沿用技能的 Target
+		DamageType constants.DamageType `json:"damageType,omitempty"` // 傷害類型(物理,魔法等)
+		Stat       constants.Stat       `json:"stat,omitempty"`       // buff影響的屬性(扣攻,扣防等)
+		Status     constants.Status     `json:"status,omitempty"`     // 狀態(中毒,燃燒等)
+		ScaleStat  constants.Stat       `json:"scaleStat,omitempty"`  // Value 以施放者哪個屬性為基準
+		Value      int                  `json:"value,omitempty"`      // 效果數值(百分比)
+		Duration   int                  `json:"duration,omitempty"`   // 持續回合
+		MaxStack   int                  `json:"maxStack,omitempty"`   // 可疊加層數
 	}
 )
