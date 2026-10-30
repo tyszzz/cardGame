@@ -36,15 +36,19 @@ type (
 
 	// 技能效果，百分比數值以整數表示(150 代表 150%)
 	SkillEffect struct {
-		Type       constants.EffectType `json:"type,omitempty"`       // 效果類型
-		Side       constants.Side       `json:"side,omitempty"`       // 作用陣營(敵方,我方,自己)
-		Target     constants.Target     `json:"target,omitempty"`     // 作用目標形狀，未填沿用技能的 Target
-		DamageType constants.DamageType `json:"damageType,omitempty"` // 傷害類型(物理,魔法等)
-		Stat       constants.Stat       `json:"stat,omitempty"`       // buff影響的屬性(扣攻,扣防等)
-		Status     constants.Status     `json:"status,omitempty"`     // 狀態(中毒,燃燒等)
-		ScaleStat  constants.Stat       `json:"scaleStat,omitempty"`  // Value 以施放者哪個屬性為基準
-		Value      int                  `json:"value,omitempty"`      // 效果數值：Rage 類型為固定怒氣點數(可為負)，其餘為百分比
-		Duration   int                  `json:"duration,omitempty"`   // 持續回合
-		MaxStack   int                  `json:"maxStack,omitempty"`   // 可疊加層數
+		Type         constants.EffectType `json:"type,omitempty"`         // 效果類型
+		Name         string               `json:"name,omitempty"`         // Buff、Status、Shield 的顯示名稱，不參與戰鬥邏輯比對
+		Side         constants.Side       `json:"side,omitempty"`         // 作用陣營(敵方,我方,自己)
+		Target       constants.Target     `json:"target,omitempty"`       // 作用目標形狀，未填沿用技能的 Target
+		DamageType   constants.DamageType `json:"damageType,omitempty"`   // 傷害類型(物理,魔法等)
+		Stat         constants.Stat       `json:"stat,omitempty"`         // buff影響的屬性(扣攻,扣防等)
+		Status       constants.Status     `json:"status,omitempty"`       // 狀態(中毒,燃燒等)
+		ScaleStat    constants.Stat       `json:"scaleStat,omitempty"`    // Value 以施放者哪個屬性為基準
+		Value        int                  `json:"value,omitempty"`        // 效果數值：Rage 類型為固定怒氣點數(可為負)，Shield 為護盾額度百分比，其餘為百分比
+		Duration     int                  `json:"duration,omitempty"`     // 持續回合；Buff、Shield 勾選 Permanent 時不填
+		MaxStack     int                  `json:"maxStack,omitempty"`     // 可疊加層數
+		Permanent    bool                 `json:"permanent,omitempty"`    // Buff、Shield 永久持續（不填 Duration）
+		NonRemovable bool                 `json:"nonRemovable,omitempty"` // 不會被驅散(增益 Buff 與護盾)或淨化(減益 Buff 與狀態)，預設可移除
+		Count        int                  `json:"count,omitempty"`        // Dispel/Cleanse 移除數量，未填代表全部
 	}
 )

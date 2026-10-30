@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"strings"
+	"unicode/utf8"
 
 	"cardGame/model/cards"
 	"cardGame/model/constants"
@@ -13,22 +15,30 @@ var talentCountByRarity = map[constants.Rarity]int{
 	constants.RarityUR:  4,
 }
 
+// maxEffectNameRunes 為 Buff 與 Status 顯示名稱的長度上限（以字元計）。
+const maxEffectNameRunes = 20
+
 type effectField uint
 
 const (
-	fDamageType effectField = 1 << iota
+	fName effectField = 1 << iota
+	fDamageType
 	fStat
 	fStatus
 	fScaleStat
 	fValue
 	fDuration
 	fMaxStack
+	fPermanent
+	fNonRemovable
+	fCount
 )
 
 var effectFieldNames = []struct {
 	bit  effectField
 	name string
 }{
+	{fName, "name"},
 	{fDamageType, "damageType"},
 	{fStat, "stat"},
 	{fStatus, "status"},
@@ -36,6 +46,9 @@ var effectFieldNames = []struct {
 	{fValue, "value"},
 	{fDuration, "duration"},
 	{fMaxStack, "maxStack"},
+	{fPermanent, "permanent"},
+	{fNonRemovable, "nonRemovable"},
+	{fCount, "count"},
 }
 
 // slotRule 描述技能欄位的差異：普攻與主動由行動流程和怒氣決定發動，不填 trigger；
@@ -126,6 +139,14 @@ func validateEffect(e *cards.SkillEffect, skillTarget constants.Target) error {
 	if e.Target != 0 && !e.Target.Valid() {
 		return fmt.Errorf("invalid target: %d", e.Target)
 	}
+	switch {
+	case e.Type == constants.EffectTypeDispel && e.Side != constants.SideEnemy:
+		return fmt.Errorf("Dispel is only allowed when side is Enemy")
+	case e.Type == constants.EffectTypeCleanse && e.Side == constants.SideEnemy:
+		return fmt.Errorf("Cleanse is only allowed when side is Ally or Self")
+	case e.Type == constants.EffectTypeShield && e.Side == constants.SideEnemy:
+		return fmt.Errorf("Shield is only allowed when side is Ally or Self")
+	}
 	if e.Side == constants.SideSelf {
 		if e.Target != 0 {
 			return fmt.Errorf("target must not be set when side is Self")
@@ -141,8 +162,11 @@ func validateEffect(e *cards.SkillEffect, skillTarget constants.Target) error {
 	if e.Side == constants.SideAlly && effectiveTarget == constants.TargetOpposite {
 		return fmt.Errorf("target Opposite is only allowed when side is Enemy")
 	}
-	if e.Duration < 0 || e.MaxStack < 0 {
-		return fmt.Errorf("duration/maxStack must not be negative")
+	if e.Duration < 0 || e.MaxStack < 0 || e.Count < 0 {
+		return fmt.Errorf("duration/maxStack/count must not be negative")
+	}
+	if e.Permanent && e.Duration != 0 {
+		return fmt.Errorf("duration must not be set when permanent")
 	}
 
 	required, optional, err := effectRule(e)
@@ -159,8 +183,17 @@ func validateEffect(e *cards.SkillEffect, skillTarget constants.Target) error {
 		}
 	}
 
+	if present&fName != 0 {
+		if strings.TrimSpace(e.Name) == "" {
+			return fmt.Errorf("name must not be blank")
+		}
+		if n := utf8.RuneCountInString(e.Name); n > maxEffectNameRunes {
+			return fmt.Errorf("name must be at most %d characters, got %d", maxEffectNameRunes, n)
+		}
+	}
+
 	switch e.Type {
-	case constants.EffectTypeDamage, constants.EffectTypeHeal:
+	case constants.EffectTypeDamage, constants.EffectTypeHeal, constants.EffectTypeShield:
 		if e.Value <= 0 {
 			return fmt.Errorf("value must be positive")
 		}
@@ -171,8 +204,9 @@ func validateEffect(e *cards.SkillEffect, skillTarget constants.Target) error {
 		if present&fValue != 0 && e.Value <= 0 {
 			return fmt.Errorf("value must be positive")
 		}
-	case constants.EffectTypeBuff:
-		if e.Duration <= 0 {
+	}
+	if e.Type == constants.EffectTypeBuff || e.Type == constants.EffectTypeShield {
+		if !e.Permanent && e.Duration <= 0 {
 			return fmt.Errorf("duration must be positive")
 		}
 	}
@@ -186,7 +220,20 @@ func effectRule(e *cards.SkillEffect) (required, optional effectField, err error
 	case constants.EffectTypeHeal:
 		return fScaleStat | fValue, 0, nil
 	case constants.EffectTypeBuff:
-		return fStat | fValue | fDuration, fMaxStack, nil
+		buffOptional := fMaxStack | fPermanent | fNonRemovable
+		if e.Permanent { // 永久 Buff 不填 duration
+			return fName | fStat | fValue, buffOptional, nil
+		}
+		return fName | fStat | fValue | fDuration, buffOptional, nil
+	case constants.EffectTypeShield:
+		// 額度 = 施放者 scaleStat 的 value%；永久護盾不填 duration
+		shieldOptional := fPermanent | fNonRemovable
+		if e.Permanent {
+			return fName | fScaleStat | fValue, shieldOptional, nil
+		}
+		return fName | fScaleStat | fValue | fDuration, shieldOptional, nil
+	case constants.EffectTypeDispel, constants.EffectTypeCleanse:
+		return 0, fCount, nil // count 未填代表全部移除
 	case constants.EffectTypeRage:
 		return fValue, 0, nil // value 為固定怒氣點數，可為負
 	case constants.EffectTypeStatus:
@@ -194,10 +241,10 @@ func effectRule(e *cards.SkillEffect) (required, optional effectField, err error
 			return 0, 0, fmt.Errorf("invalid status: %d", e.Status)
 		}
 		if e.Status == constants.StatusStun {
-			return fStatus | fDuration, fMaxStack, nil
+			return fName | fStatus | fDuration, fMaxStack | fNonRemovable, nil
 		}
 		// 持續傷害類狀態需要傷害百分比與基準屬性
-		return fStatus | fDuration | fScaleStat | fValue, fMaxStack, nil
+		return fName | fStatus | fDuration | fScaleStat | fValue, fMaxStack | fNonRemovable, nil
 	}
 	return 0, 0, fmt.Errorf("unsupported type: %s", e.Type)
 }
@@ -209,6 +256,7 @@ func presentFields(e *cards.SkillEffect) effectField {
 			m |= bit
 		}
 	}
+	set(e.Name != "", fName)
 	set(e.DamageType != 0, fDamageType)
 	set(e.Stat != 0, fStat)
 	set(e.Status != 0, fStatus)
@@ -216,5 +264,8 @@ func presentFields(e *cards.SkillEffect) effectField {
 	set(e.Value != 0, fValue)
 	set(e.Duration != 0, fDuration)
 	set(e.MaxStack != 0, fMaxStack)
+	set(e.Permanent, fPermanent)
+	set(e.NonRemovable, fNonRemovable)
+	set(e.Count != 0, fCount)
 	return m
 }

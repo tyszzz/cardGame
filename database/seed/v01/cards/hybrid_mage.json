@@ -1,0 +1,62 @@
+{
+  "cardId": "hybrid_mage",
+  "cardName": "混血法師",
+  "rarity": "R",
+  "race": "Hybrid",
+  "baseConfig": {
+    "attack": 500,
+    "attackRatio": 1.2,
+    "defense": 100,
+    "defenseRatio": 1,
+    "health": 8000,
+    "healthRatio": 0.8
+  },
+  "skillConfig": {
+    "normalAtk": {
+      "name": "元素彈",
+      "desc": "對敵方隨機3人造成攻擊力40%的魔法傷害",
+      "target": "Random3",
+      "effects": [
+        {
+          "type": "Damage",
+          "side": "Enemy",
+          "damageType": "Magic",
+          "scaleStat": "Attack",
+          "value": 40
+        }
+      ]
+    },
+    "activeSkill": {
+      "name": "元素超載",
+      "desc": "對敵方全體造成攻擊力120%的魔法傷害",
+      "target": "All",
+      "effects": [
+        {
+          "type": "Damage",
+          "side": "Enemy",
+          "damageType": "Magic",
+          "scaleStat": "Attack",
+          "value": 120
+        }
+      ]
+    },
+    "passiveSkill": {
+      "name": "戰鬥激勵",
+      "desc": "戰鬥開始時，攻擊力增加20%",
+      "trigger": "BattleStart",
+      "effects": [
+        {
+          "type": "Buff",
+          "side": "Self",
+          "name": "士氣",
+          "stat": "Attack",
+          "value": 20,
+          "permanent": true,
+          "nonRemovable": true
+        }
+      ]
+    },
+    "talentSkill": []
+  },
+  "isEnabled": true
+}

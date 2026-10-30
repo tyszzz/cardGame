@@ -208,7 +208,7 @@
               <option value="Xian">仙族 (Xian)</option>
               <option value="Mo">魔族 (Mo)</option>
               <option value="Dragon">龍族 (Dragon)</option>
-              <option value="Hybrid">雜種 (Hybrid)</option>
+              <option value="Hybrid">混血 (Hybrid)</option>
             </select>
           </div>
 
@@ -266,7 +266,7 @@
     const ENUMS = {
       trigger: [["BattleStart", "戰鬥開始時"], ["BeforeRoundStart", "回合開始前"], ["RoundEnd", "回合結束時"], ["BeforeAction", "行動前"], ["AfterAction", "行動後"]],
       target: [["Single", "單體"], ["Opposite", "對位"], ["Random3", "隨機3人"], ["All", "全體"], ["FrontRow", "前排"], ["BackRow", "後排"], ["Column", "縱排"]],
-      effectType: [["Damage", "傷害"], ["Status", "狀態"], ["Heal", "回血"], ["Buff", "增減屬性"], ["Rage", "增減怒氣"]],
+      effectType: [["Damage", "傷害"], ["Status", "狀態"], ["Heal", "回血"], ["Buff", "增減屬性"], ["Rage", "增減怒氣"], ["Dispel", "驅散增益"], ["Cleanse", "淨化減益"], ["Shield", "護盾"]],
       stat: [["Health", "生命"], ["Attack", "攻擊"], ["Defense", "防禦"]],
       status: [["Poison", "中毒"], ["Burn", "燃燒"], ["Stun", "暈眩"]],
       damageType: [["Physical", "物理"], ["Magic", "魔法"], ["True", "真實"]],
@@ -277,14 +277,19 @@
     const FIXED_SKILLS = [["normalAtk", "普通攻擊", false], ["activeSkill", "主動技能", false], ["passiveSkill", "被動技能", true]];
     const DOT_STATUSES = ["Poison", "Burn"];
     // 效果欄位的顯示與輸出順序
+    const MAX_EFFECT_NAME = 20;
     const EFFECT_FIELDS = [
+      ["name", "名稱（顯示用）", "text"],
       ["damageType", "傷害類型", "damageType"],
       ["stat", "屬性", "stat"],
       ["status", "狀態", "status"],
       ["scaleStat", "基準屬性（施放者）", "stat"],
       ["value", "數值（%）"],
+      ["permanent", "永久持續", "checkbox"],
       ["duration", "持續回合"],
-      ["maxStack", "可疊加層數（選填）"]
+      ["count", "移除數量（選填，未填代表全部）"],
+      ["maxStack", "可疊加層數（選填）"],
+      ["nonRemovable", "不可被驅散／淨化", "checkbox"]
     ];
 
     const skillsFixed = document.querySelector("#skills-fixed");
@@ -313,17 +318,26 @@
       return el("div", { className: "field" }, [el("label", { textContent: text }), control]);
     }
 
-    function effectFieldsFor(type, status) {
+    function effectFieldsFor(type, status, permanent = false) {
       switch (type) {
         case "Damage": return ["damageType", "scaleStat", "value"];
         case "Heal": return ["scaleStat", "value"];
-        case "Buff": return ["stat", "value", "duration", "maxStack"];
+        case "Buff":
+          return permanent
+            ? ["name", "stat", "value", "permanent", "maxStack", "nonRemovable"]
+            : ["name", "stat", "value", "permanent", "duration", "maxStack", "nonRemovable"];
         case "Rage": return ["value"];
+        case "Shield":
+          return permanent
+            ? ["name", "scaleStat", "value", "permanent", "nonRemovable"]
+            : ["name", "scaleStat", "value", "permanent", "duration", "nonRemovable"];
+        case "Dispel":
+        case "Cleanse": return ["count"];
         case "Status":
-          if (!status) return ["status"];
+          if (!status) return ["name", "status"];
           return DOT_STATUSES.includes(status)
-            ? ["status", "scaleStat", "value", "duration", "maxStack"]
-            : ["status", "duration", "maxStack"];
+            ? ["name", "status", "scaleStat", "value", "duration", "maxStack", "nonRemovable"]
+            : ["name", "status", "duration", "maxStack", "nonRemovable"];
         default: return [];
       }
     }
@@ -348,20 +362,30 @@
 
       const fieldGrid = el("div", { className: "grid-3" });
       for (const [key, label, enumKey] of EFFECT_FIELDS) {
-        refs[key] = enumKey ? makeSelect(enumKey, "請選擇") : el("input", { type: "number", step: "1" });
-        wrappers[key] = labeled(label, refs[key]);
+        if (enumKey === "checkbox") {
+          refs[key] = el("input", { type: "checkbox" });
+          wrappers[key] = el("div", { className: "field" }, [el("label", { className: "checkbox" }, [refs[key], label])]);
+        } else if (enumKey === "text") {
+          refs[key] = el("input", { type: "text", maxLength: MAX_EFFECT_NAME, placeholder: "例如：狂暴、A毒" });
+          wrappers[key] = labeled(label, refs[key]);
+        } else {
+          refs[key] = enumKey ? makeSelect(enumKey, "請選擇") : el("input", { type: "number", step: "1" });
+          wrappers[key] = labeled(label, refs[key]);
+        }
         fieldGrid.append(wrappers[key]);
       }
       node.append(fieldGrid);
 
       function refresh() {
-        const visible = effectFieldsFor(refs.type.value, refs.status.value);
+        const visible = effectFieldsFor(refs.type.value, refs.status.value, refs.permanent.checked);
         for (const [key] of EFFECT_FIELDS) wrappers[key].hidden = !visible.includes(key);
         wrappers.target.hidden = refs.side.value === "Self";
         wrappers.value.querySelector("label").textContent =
-          refs.type.value === "Rage" ? "怒氣點數（可為負）" : "數值（%）";
+          refs.type.value === "Rage" ? "怒氣點數（可為負）"
+            : refs.type.value === "Shield" ? "護盾額度（基準屬性的 %）"
+            : "數值（%）";
       }
-      for (const key of ["type", "side", "status"]) refs[key].addEventListener("change", refresh);
+      for (const key of ["type", "side", "status", "permanent"]) refs[key].addEventListener("change", refresh);
       removeButton.addEventListener("click", () => {
         node.remove();
         renumberEffects(effectsEl);
@@ -462,6 +486,10 @@
       const side = refs.side.value;
       if (!side) throw new Error("請選擇作用陣營。");
 
+      if (type === "Dispel" && side !== "Enemy") throw new Error("驅散只能對敵方。");
+      if (type === "Cleanse" && side === "Enemy") throw new Error("淨化只能對我方或自己。");
+      if (type === "Shield" && side === "Enemy") throw new Error("護盾只能對我方或自己。");
+
       const effect = { type, side };
       if (side !== "Self") {
         if (refs.target.value) effect.target = refs.target.value;
@@ -471,10 +499,17 @@
         }
       }
 
-      const visible = effectFieldsFor(type, refs.status.value);
+      const visible = effectFieldsFor(type, refs.status.value, refs.permanent.checked);
       for (const [key, label, enumKey] of EFFECT_FIELDS) {
         if (!visible.includes(key)) continue;
-        if (enumKey) {
+        if (enumKey === "checkbox") {
+          if (refs[key].checked) effect[key] = true;
+        } else if (enumKey === "text") {
+          const name = refs[key].value.trim();
+          if (!name) throw new Error("請輸入名稱。");
+          if ([...name].length > MAX_EFFECT_NAME) throw new Error(`名稱不可超過 ${MAX_EFFECT_NAME} 個字。`);
+          effect.name = name;
+        } else if (enumKey) {
           if (!refs[key].value) throw new Error(`請選擇${label}。`);
           effect[key] = refs[key].value;
         } else if (key === "value") {
@@ -483,9 +518,10 @@
             : readInt(refs.value, label, { min: 1 });
         } else if (key === "duration") {
           effect.duration = readInt(refs.duration, label, { min: 1 });
-        } else if (refs.maxStack.value.trim() !== "") {
-          const maxStack = readInt(refs.maxStack, label);
-          if (maxStack > 0) effect.maxStack = maxStack;
+        } else if (refs[key].value.trim() !== "") {
+          // count、maxStack 為選填，0 視為未填
+          const number = key === "count" ? readInt(refs.count, "移除數量", { min: 0 }) : readInt(refs.maxStack, label);
+          if (number > 0) effect[key] = number;
         }
       }
       return effect;

@@ -11,3 +11,168 @@ ON CONFLICT (card_id) DO UPDATE SET
     is_enabled = EXCLUDED.is_enabled,
     updated_at = CURRENT_TIMESTAMP;
 
+INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled)
+VALUES ('dragon_guard', '龍族盾衛', 1, 4, '{"attack":150,"attackRatio":0.5,"defense":200,"defenseRatio":1.25,"health":12000,"healthRatio":1.25}'::jsonb, '{"normalAtk":{"name":"盾牌衝擊","desc":"對敵方單體造成防禦力120%的物理傷害","target":"Single","effects":[{"type":"Damage","side":"Enemy","damageType":"Physical","scaleStat":"Defense","value":120}]},"activeSkill":{"name":"我為人人","desc":"為我方全體附加自身20%生命力的護盾","target":"All","effects":[{"type":"Shield","side":"Ally","target":"All","name":"我為人人","scaleStat":"Health","value":20,"duration":3}]},"passiveSkill":{"name":"堅毅不倒","desc":"戰鬥開始時，增加自身防禦力，生命力各10%","trigger":"BattleStart","effects":[{"type":"Buff","side":"Self","name":"堅毅不倒","stat":"Health","value":10,"permanent":true},{"type":"Buff","side":"Self","name":"堅毅不倒","stat":"Defense","value":10,"permanent":true}]},"talentSkill":[]}'::jsonb, true)
+ON CONFLICT (card_id) DO UPDATE SET
+    card_name = EXCLUDED.card_name,
+    rarity = EXCLUDED.rarity,
+    race = EXCLUDED.race,
+    base_config = EXCLUDED.base_config,
+    skill_config = EXCLUDED.skill_config,
+    is_enabled = EXCLUDED.is_enabled,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled)
+VALUES ('dragon_mage', '龍族法師', 1, 4, '{"attack":500,"attackRatio":1.2,"defense":100,"defenseRatio":1,"health":8000,"healthRatio":0.8}'::jsonb, '{"normalAtk":{"name":"元素彈","desc":"對敵方隨機3人造成攻擊力40%的魔法傷害","target":"Random3","effects":[{"type":"Damage","side":"Enemy","damageType":"Magic","scaleStat":"Attack","value":40}]},"activeSkill":{"name":"元素超載","desc":"對敵方全體造成攻擊力120%的魔法傷害","target":"All","effects":[{"type":"Damage","side":"Enemy","damageType":"Magic","scaleStat":"Attack","value":120}]},"passiveSkill":{"name":"戰鬥激勵","desc":"戰鬥開始時，攻擊力增加20%","trigger":"BattleStart","effects":[{"type":"Buff","side":"Self","name":"士氣","stat":"Attack","value":20,"permanent":true,"nonRemovable":true}]},"talentSkill":[]}'::jsonb, true)
+ON CONFLICT (card_id) DO UPDATE SET
+    card_name = EXCLUDED.card_name,
+    rarity = EXCLUDED.rarity,
+    race = EXCLUDED.race,
+    base_config = EXCLUDED.base_config,
+    skill_config = EXCLUDED.skill_config,
+    is_enabled = EXCLUDED.is_enabled,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled)
+VALUES ('dragon_soldier', '龍族步兵', 1, 4, '{"attack":400,"attackRatio":1,"defense":100,"defenseRatio":1,"health":10000,"healthRatio":1}'::jsonb, '{"normalAtk":{"name":"劍氣","desc":"對敵方單體造成攻擊力100%的物理傷害","target":"Single","effects":[{"type":"Damage","side":"Enemy","damageType":"Physical","scaleStat":"Attack","value":100}]},"activeSkill":{"name":"劍氣亂舞","desc":"對敵方隨機3人造成攻擊力180%的物理傷害","target":"Random3","effects":[{"type":"Damage","side":"Enemy","damageType":"Physical","scaleStat":"Attack","value":180}]},"passiveSkill":{"name":"戰鬥激勵","desc":"戰鬥開始時，攻擊力增加20%","trigger":"BattleStart","effects":[{"type":"Buff","side":"Self","name":"士氣","stat":"Attack","value":20,"permanent":true,"nonRemovable":true}]},"talentSkill":[]}'::jsonb, true)
+ON CONFLICT (card_id) DO UPDATE SET
+    card_name = EXCLUDED.card_name,
+    rarity = EXCLUDED.rarity,
+    race = EXCLUDED.race,
+    base_config = EXCLUDED.base_config,
+    skill_config = EXCLUDED.skill_config,
+    is_enabled = EXCLUDED.is_enabled,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled)
+VALUES ('human_guard', '人族盾衛', 1, 1, '{"attack":150,"attackRatio":0.5,"defense":200,"defenseRatio":1.25,"health":12000,"healthRatio":1.25}'::jsonb, '{"normalAtk":{"name":"盾牌衝擊","desc":"對敵方單體造成防禦力120%的物理傷害","target":"Single","effects":[{"type":"Damage","side":"Enemy","damageType":"Physical","scaleStat":"Defense","value":120}]},"activeSkill":{"name":"我為人人","desc":"為我方全體附加自身20%生命力的護盾","target":"All","effects":[{"type":"Shield","side":"Ally","target":"All","name":"我為人人","scaleStat":"Health","value":20,"duration":3}]},"passiveSkill":{"name":"堅毅不倒","desc":"戰鬥開始時，增加自身防禦力，生命力各10%","trigger":"BattleStart","effects":[{"type":"Buff","side":"Self","name":"堅毅不倒","stat":"Health","value":10,"permanent":true},{"type":"Buff","side":"Self","name":"堅毅不倒","stat":"Defense","value":10,"permanent":true}]},"talentSkill":[]}'::jsonb, true)
+ON CONFLICT (card_id) DO UPDATE SET
+    card_name = EXCLUDED.card_name,
+    rarity = EXCLUDED.rarity,
+    race = EXCLUDED.race,
+    base_config = EXCLUDED.base_config,
+    skill_config = EXCLUDED.skill_config,
+    is_enabled = EXCLUDED.is_enabled,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled)
+VALUES ('human_mage', '人族法師', 1, 1, '{"attack":500,"attackRatio":1.2,"defense":100,"defenseRatio":1,"health":8000,"healthRatio":0.8}'::jsonb, '{"normalAtk":{"name":"元素彈","desc":"對敵方隨機3人造成攻擊力40%的魔法傷害","target":"Random3","effects":[{"type":"Damage","side":"Enemy","damageType":"Magic","scaleStat":"Attack","value":40}]},"activeSkill":{"name":"元素超載","desc":"對敵方全體造成攻擊力120%的魔法傷害","target":"All","effects":[{"type":"Damage","side":"Enemy","damageType":"Magic","scaleStat":"Attack","value":120}]},"passiveSkill":{"name":"戰鬥激勵","desc":"戰鬥開始時，攻擊力增加20%","trigger":"BattleStart","effects":[{"type":"Buff","side":"Self","name":"士氣","stat":"Attack","value":20,"permanent":true,"nonRemovable":true}]},"talentSkill":[]}'::jsonb, true)
+ON CONFLICT (card_id) DO UPDATE SET
+    card_name = EXCLUDED.card_name,
+    rarity = EXCLUDED.rarity,
+    race = EXCLUDED.race,
+    base_config = EXCLUDED.base_config,
+    skill_config = EXCLUDED.skill_config,
+    is_enabled = EXCLUDED.is_enabled,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled)
+VALUES ('human_soldier', '人族步兵', 1, 1, '{"attack":400,"attackRatio":1,"defense":100,"defenseRatio":1,"health":10000,"healthRatio":1}'::jsonb, '{"normalAtk":{"name":"劍氣","desc":"對敵方單體造成攻擊力100%的物理傷害","target":"Single","effects":[{"type":"Damage","side":"Enemy","damageType":"Physical","scaleStat":"Attack","value":100}]},"activeSkill":{"name":"劍氣亂舞","desc":"對敵方隨機3人造成攻擊力180%的物理傷害","target":"Random3","effects":[{"type":"Damage","side":"Enemy","damageType":"Physical","scaleStat":"Attack","value":180}]},"passiveSkill":{"name":"戰鬥激勵","desc":"戰鬥開始時，攻擊力增加20%","trigger":"BattleStart","effects":[{"type":"Buff","side":"Self","name":"士氣","stat":"Attack","value":20,"permanent":true,"nonRemovable":true}]},"talentSkill":[]}'::jsonb, true)
+ON CONFLICT (card_id) DO UPDATE SET
+    card_name = EXCLUDED.card_name,
+    rarity = EXCLUDED.rarity,
+    race = EXCLUDED.race,
+    base_config = EXCLUDED.base_config,
+    skill_config = EXCLUDED.skill_config,
+    is_enabled = EXCLUDED.is_enabled,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled)
+VALUES ('hybrid_guard', '混血盾衛', 1, 5, '{"attack":150,"attackRatio":0.5,"defense":200,"defenseRatio":1.25,"health":12000,"healthRatio":1.25}'::jsonb, '{"normalAtk":{"name":"盾牌衝擊","desc":"對敵方單體造成防禦力120%的物理傷害","target":"Single","effects":[{"type":"Damage","side":"Enemy","damageType":"Physical","scaleStat":"Defense","value":120}]},"activeSkill":{"name":"我為人人","desc":"為我方全體附加自身20%生命力的護盾","target":"All","effects":[{"type":"Shield","side":"Ally","target":"All","name":"我為人人","scaleStat":"Health","value":20,"duration":3}]},"passiveSkill":{"name":"堅毅不倒","desc":"戰鬥開始時，增加自身防禦力，生命力各10%","trigger":"BattleStart","effects":[{"type":"Buff","side":"Self","name":"堅毅不倒","stat":"Health","value":10,"permanent":true},{"type":"Buff","side":"Self","name":"堅毅不倒","stat":"Defense","value":10,"permanent":true}]},"talentSkill":[]}'::jsonb, true)
+ON CONFLICT (card_id) DO UPDATE SET
+    card_name = EXCLUDED.card_name,
+    rarity = EXCLUDED.rarity,
+    race = EXCLUDED.race,
+    base_config = EXCLUDED.base_config,
+    skill_config = EXCLUDED.skill_config,
+    is_enabled = EXCLUDED.is_enabled,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled)
+VALUES ('hybrid_mage', '混血法師', 1, 5, '{"attack":500,"attackRatio":1.2,"defense":100,"defenseRatio":1,"health":8000,"healthRatio":0.8}'::jsonb, '{"normalAtk":{"name":"元素彈","desc":"對敵方隨機3人造成攻擊力40%的魔法傷害","target":"Random3","effects":[{"type":"Damage","side":"Enemy","damageType":"Magic","scaleStat":"Attack","value":40}]},"activeSkill":{"name":"元素超載","desc":"對敵方全體造成攻擊力120%的魔法傷害","target":"All","effects":[{"type":"Damage","side":"Enemy","damageType":"Magic","scaleStat":"Attack","value":120}]},"passiveSkill":{"name":"戰鬥激勵","desc":"戰鬥開始時，攻擊力增加20%","trigger":"BattleStart","effects":[{"type":"Buff","side":"Self","name":"士氣","stat":"Attack","value":20,"permanent":true,"nonRemovable":true}]},"talentSkill":[]}'::jsonb, true)
+ON CONFLICT (card_id) DO UPDATE SET
+    card_name = EXCLUDED.card_name,
+    rarity = EXCLUDED.rarity,
+    race = EXCLUDED.race,
+    base_config = EXCLUDED.base_config,
+    skill_config = EXCLUDED.skill_config,
+    is_enabled = EXCLUDED.is_enabled,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled)
+VALUES ('hybrid_soldier', '混血步兵', 1, 5, '{"attack":400,"attackRatio":1,"defense":100,"defenseRatio":1,"health":10000,"healthRatio":1}'::jsonb, '{"normalAtk":{"name":"劍氣","desc":"對敵方單體造成攻擊力100%的物理傷害","target":"Single","effects":[{"type":"Damage","side":"Enemy","damageType":"Physical","scaleStat":"Attack","value":100}]},"activeSkill":{"name":"劍氣亂舞","desc":"對敵方隨機3人造成攻擊力180%的物理傷害","target":"Random3","effects":[{"type":"Damage","side":"Enemy","damageType":"Physical","scaleStat":"Attack","value":180}]},"passiveSkill":{"name":"戰鬥激勵","desc":"戰鬥開始時，攻擊力增加20%","trigger":"BattleStart","effects":[{"type":"Buff","side":"Self","name":"士氣","stat":"Attack","value":20,"permanent":true,"nonRemovable":true}]},"talentSkill":[]}'::jsonb, true)
+ON CONFLICT (card_id) DO UPDATE SET
+    card_name = EXCLUDED.card_name,
+    rarity = EXCLUDED.rarity,
+    race = EXCLUDED.race,
+    base_config = EXCLUDED.base_config,
+    skill_config = EXCLUDED.skill_config,
+    is_enabled = EXCLUDED.is_enabled,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled)
+VALUES ('mo_guard', '魔族盾衛', 1, 3, '{"attack":150,"attackRatio":0.5,"defense":200,"defenseRatio":1.25,"health":12000,"healthRatio":1.25}'::jsonb, '{"normalAtk":{"name":"盾牌衝擊","desc":"對敵方單體造成防禦力120%的物理傷害","target":"Single","effects":[{"type":"Damage","side":"Enemy","damageType":"Physical","scaleStat":"Defense","value":120}]},"activeSkill":{"name":"我為人人","desc":"為我方全體附加自身20%生命力的護盾","target":"All","effects":[{"type":"Shield","side":"Ally","target":"All","name":"我為人人","scaleStat":"Health","value":20,"duration":3}]},"passiveSkill":{"name":"堅毅不倒","desc":"戰鬥開始時，增加自身防禦力，生命力各10%","trigger":"BattleStart","effects":[{"type":"Buff","side":"Self","name":"堅毅不倒","stat":"Health","value":10,"permanent":true},{"type":"Buff","side":"Self","name":"堅毅不倒","stat":"Defense","value":10,"permanent":true}]},"talentSkill":[]}'::jsonb, true)
+ON CONFLICT (card_id) DO UPDATE SET
+    card_name = EXCLUDED.card_name,
+    rarity = EXCLUDED.rarity,
+    race = EXCLUDED.race,
+    base_config = EXCLUDED.base_config,
+    skill_config = EXCLUDED.skill_config,
+    is_enabled = EXCLUDED.is_enabled,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled)
+VALUES ('mo_mage', '魔族法師', 1, 3, '{"attack":500,"attackRatio":1.2,"defense":100,"defenseRatio":1,"health":8000,"healthRatio":0.8}'::jsonb, '{"normalAtk":{"name":"元素彈","desc":"對敵方隨機3人造成攻擊力40%的魔法傷害","target":"Random3","effects":[{"type":"Damage","side":"Enemy","damageType":"Magic","scaleStat":"Attack","value":40}]},"activeSkill":{"name":"元素超載","desc":"對敵方全體造成攻擊力120%的魔法傷害","target":"All","effects":[{"type":"Damage","side":"Enemy","damageType":"Magic","scaleStat":"Attack","value":120}]},"passiveSkill":{"name":"戰鬥激勵","desc":"戰鬥開始時，攻擊力增加20%","trigger":"BattleStart","effects":[{"type":"Buff","side":"Self","name":"士氣","stat":"Attack","value":20,"permanent":true,"nonRemovable":true}]},"talentSkill":[]}'::jsonb, true)
+ON CONFLICT (card_id) DO UPDATE SET
+    card_name = EXCLUDED.card_name,
+    rarity = EXCLUDED.rarity,
+    race = EXCLUDED.race,
+    base_config = EXCLUDED.base_config,
+    skill_config = EXCLUDED.skill_config,
+    is_enabled = EXCLUDED.is_enabled,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled)
+VALUES ('mo_soldier', '魔族步兵', 1, 3, '{"attack":400,"attackRatio":1,"defense":100,"defenseRatio":1,"health":10000,"healthRatio":1}'::jsonb, '{"normalAtk":{"name":"劍氣","desc":"對敵方單體造成攻擊力100%的物理傷害","target":"Single","effects":[{"type":"Damage","side":"Enemy","damageType":"Physical","scaleStat":"Attack","value":100}]},"activeSkill":{"name":"劍氣亂舞","desc":"對敵方隨機3人造成攻擊力180%的物理傷害","target":"Random3","effects":[{"type":"Damage","side":"Enemy","damageType":"Physical","scaleStat":"Attack","value":180}]},"passiveSkill":{"name":"戰鬥激勵","desc":"戰鬥開始時，攻擊力增加20%","trigger":"BattleStart","effects":[{"type":"Buff","side":"Self","name":"士氣","stat":"Attack","value":20,"permanent":true,"nonRemovable":true}]},"talentSkill":[]}'::jsonb, true)
+ON CONFLICT (card_id) DO UPDATE SET
+    card_name = EXCLUDED.card_name,
+    rarity = EXCLUDED.rarity,
+    race = EXCLUDED.race,
+    base_config = EXCLUDED.base_config,
+    skill_config = EXCLUDED.skill_config,
+    is_enabled = EXCLUDED.is_enabled,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled)
+VALUES ('xian_guard', '仙族盾衛', 1, 2, '{"attack":150,"attackRatio":0.5,"defense":200,"defenseRatio":1.25,"health":12000,"healthRatio":1.25}'::jsonb, '{"normalAtk":{"name":"盾牌衝擊","desc":"對敵方單體造成防禦力120%的物理傷害","target":"Single","effects":[{"type":"Damage","side":"Enemy","damageType":"Physical","scaleStat":"Defense","value":120}]},"activeSkill":{"name":"我為人人","desc":"為我方全體附加自身20%生命力的護盾","target":"All","effects":[{"type":"Shield","side":"Ally","target":"All","name":"我為人人","scaleStat":"Health","value":20,"duration":3}]},"passiveSkill":{"name":"堅毅不倒","desc":"戰鬥開始時，增加自身防禦力，生命力各10%","trigger":"BattleStart","effects":[{"type":"Buff","side":"Self","name":"堅毅不倒","stat":"Health","value":10,"permanent":true},{"type":"Buff","side":"Self","name":"堅毅不倒","stat":"Defense","value":10,"permanent":true}]},"talentSkill":[]}'::jsonb, true)
+ON CONFLICT (card_id) DO UPDATE SET
+    card_name = EXCLUDED.card_name,
+    rarity = EXCLUDED.rarity,
+    race = EXCLUDED.race,
+    base_config = EXCLUDED.base_config,
+    skill_config = EXCLUDED.skill_config,
+    is_enabled = EXCLUDED.is_enabled,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled)
+VALUES ('xian_mage', '仙族法師', 1, 2, '{"attack":500,"attackRatio":1.2,"defense":100,"defenseRatio":1,"health":8000,"healthRatio":0.8}'::jsonb, '{"normalAtk":{"name":"元素彈","desc":"對敵方隨機3人造成攻擊力40%的魔法傷害","target":"Random3","effects":[{"type":"Damage","side":"Enemy","damageType":"Magic","scaleStat":"Attack","value":40}]},"activeSkill":{"name":"元素超載","desc":"對敵方全體造成攻擊力120%的魔法傷害","target":"All","effects":[{"type":"Damage","side":"Enemy","damageType":"Magic","scaleStat":"Attack","value":120}]},"passiveSkill":{"name":"戰鬥激勵","desc":"戰鬥開始時，攻擊力增加20%","trigger":"BattleStart","effects":[{"type":"Buff","side":"Self","name":"士氣","stat":"Attack","value":20,"permanent":true,"nonRemovable":true}]},"talentSkill":[]}'::jsonb, true)
+ON CONFLICT (card_id) DO UPDATE SET
+    card_name = EXCLUDED.card_name,
+    rarity = EXCLUDED.rarity,
+    race = EXCLUDED.race,
+    base_config = EXCLUDED.base_config,
+    skill_config = EXCLUDED.skill_config,
+    is_enabled = EXCLUDED.is_enabled,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled)
+VALUES ('xian_soldier', '仙族步兵', 1, 2, '{"attack":400,"attackRatio":1,"defense":100,"defenseRatio":1,"health":10000,"healthRatio":1}'::jsonb, '{"normalAtk":{"name":"劍氣","desc":"對敵方單體造成攻擊力100%的物理傷害","target":"Single","effects":[{"type":"Damage","side":"Enemy","damageType":"Physical","scaleStat":"Attack","value":100}]},"activeSkill":{"name":"劍氣亂舞","desc":"對敵方隨機3人造成攻擊力180%的物理傷害","target":"Random3","effects":[{"type":"Damage","side":"Enemy","damageType":"Physical","scaleStat":"Attack","value":180}]},"passiveSkill":{"name":"戰鬥激勵","desc":"戰鬥開始時，攻擊力增加20%","trigger":"BattleStart","effects":[{"type":"Buff","side":"Self","name":"士氣","stat":"Attack","value":20,"permanent":true,"nonRemovable":true}]},"talentSkill":[]}'::jsonb, true)
+ON CONFLICT (card_id) DO UPDATE SET
+    card_name = EXCLUDED.card_name,
+    rarity = EXCLUDED.rarity,
+    race = EXCLUDED.race,
+    base_config = EXCLUDED.base_config,
+    skill_config = EXCLUDED.skill_config,
+    is_enabled = EXCLUDED.is_enabled,
+    updated_at = CURRENT_TIMESTAMP;
+

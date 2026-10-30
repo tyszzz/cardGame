@@ -13,7 +13,7 @@ const (
 	RaceXian   Race = 2 // 仙族
 	RaceMo     Race = 3 // 魔族
 	RaceDragon Race = 4 // 龍族
-	RaceHybrid Race = 5 // 雜種
+	RaceHybrid Race = 5 // 混血
 )
 
 var raceValueToName = map[Race]string{

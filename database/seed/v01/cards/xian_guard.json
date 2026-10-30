@@ -1,0 +1,71 @@
+{
+  "cardId": "xian_guard",
+  "cardName": "仙族盾衛",
+  "rarity": "R",
+  "race": "Xian",
+  "baseConfig": {
+    "attack": 150,
+    "attackRatio": 0.5,
+    "defense": 200,
+    "defenseRatio": 1.25,
+    "health": 12000,
+    "healthRatio": 1.25
+  },
+  "skillConfig": {
+    "normalAtk": {
+      "name": "盾牌衝擊",
+      "desc": "對敵方單體造成防禦力120%的物理傷害",
+      "target": "Single",
+      "effects": [
+        {
+          "type": "Damage",
+          "side": "Enemy",
+          "damageType": "Physical",
+          "scaleStat": "Defense",
+          "value": 120
+        }
+      ]
+    },
+    "activeSkill": {
+      "name": "我為人人",
+      "desc": "為我方全體附加自身20%生命力的護盾",
+      "target": "All",
+      "effects": [
+        {
+          "type": "Shield",
+          "side": "Ally",
+          "target": "All",
+          "name": "我為人人",
+          "scaleStat": "Health",
+          "value": 20,
+          "duration": 3
+        }
+      ]
+    },
+    "passiveSkill": {
+      "name": "堅毅不倒",
+      "desc": "戰鬥開始時，增加自身防禦力，生命力各10%",
+      "trigger": "BattleStart",
+      "effects": [
+        {
+          "type": "Buff",
+          "side": "Self",
+          "name": "堅毅不倒",
+          "stat": "Health",
+          "value": 10,
+          "permanent": true
+        },
+        {
+          "type": "Buff",
+          "side": "Self",
+          "name": "堅毅不倒",
+          "stat": "Defense",
+          "value": 10,
+          "permanent": true
+        }
+      ]
+    },
+    "talentSkill": []
+  },
+  "isEnabled": true
+}

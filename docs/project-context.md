@@ -158,6 +158,9 @@ PGPASSWORD=... psql -h 127.0.0.1 -p 5433 -U tyszzz -d tyszzz -f migration/000001
 - 卡片定義以 JSON 維護於 `database/seed/<version>/cards/*.json`（可用 `tools/card-editor.html` 產生），再以 `go run ./cmd/cardseed <version>`（在 `Server/` 下）轉成 `cards.sql`，由 `database/seed.sh` 匯入。`cardseed` 會驗證欄位、稀有度與技能規則。
 - 技能：每張卡都有普攻、主動、被動；天賦僅 SSR（3 個）與 UR（4 個）有。普攻與主動技能不填 `trigger`，被動與天賦才由 `trigger` 決定發動時機。
 - 怒氣（所有卡共用，常數見 `model/constants/rage.go`）：初始 50，滿 100 才施放主動技能，施放後扣 100 並保留剩餘；怒氣上限與累積方式（普攻、受傷等）待戰鬥系統設計時決定。效果類型 `Rage` 可增減怒氣，`value` 為固定點數（可為負），其餘效果的 `value` 為百分比。
+- Buff 可勾選 `permanent`（永久，此時不填 `duration`）與 `nonRemovable`（不會被驅散或淨化，預設可移除）；Status 也可設定 `nonRemovable`。`Dispel`（驅散增益）只能對敵方，移除正值 Buff 與護盾；`Cleanse`（淨化減益）只能對我方或自己，移除負值 Buff 與所有 Status；兩者以選填的 `count` 指定移除數量，未填代表全部。移除哪幾個由戰鬥系統決定。
+- Buff 與 Status 效果都必填 `name`（顯示名稱，最多 20 個字），只用來顯示，不參與戰鬥邏輯比對；`status`（中毒、燃燒、暈眩）是類別，同類別可有不同名稱與數值（例如 A 毒、B 毒）。buff/status 的疊加以「來源技能與效果」區分，不同來源各自獨立。
+- 護盾（效果類型 `Shield`）：只能對我方或自己；必填 `name`、`scaleStat`、`value`，額度為施放者 `scaleStat` 的 `value`%；`duration` 與 `permanent` 二擇一，可設 `nonRemovable`，不開放 `maxStack`。護盾算增益，會被 `Dispel` 移除（`nonRemovable` 除外），不受 `Cleanse` 影響。護盾吸收所有傷害，**真實傷害除外**；多個護盾的消耗順序與同來源重複施放的處理由戰鬥系統決定。
 - 抽卡：Normal（Coin 5000）、Friend（FriendPoint 20）、Diamond（Diamond 200）；單抽或十連，十連不打折，Diamond 十連 1800 且至少一張 SSR 以上。Normal 與 Friend 只出 R、SR（70:30），Diamond 為 R、SR、SSR、UR（50:30:18:2）。同稀有度內機率均等。
 - 玩家對每張卡最多持有一張（`player_cards` 有 `UNIQUE (uid, card_id)`）；抽到重複的卡改給碎片放入背包：R 30、SR 30、SSR 10、UR 5。無卡片容量限制。
 - 卡池於 server 啟動後第一次抽卡時載入記憶體，新增或停用卡片需重啟 server。

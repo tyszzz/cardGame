@@ -1,0 +1,62 @@
+{
+  "cardId": "human_soldier",
+  "cardName": "人族步兵",
+  "rarity": "R",
+  "race": "Human",
+  "baseConfig": {
+    "attack": 400,
+    "attackRatio": 1,
+    "defense": 100,
+    "defenseRatio": 1,
+    "health": 10000,
+    "healthRatio": 1
+  },
+  "skillConfig": {
+    "normalAtk": {
+      "name": "劍氣",
+      "desc": "對敵方單體造成攻擊力100%的物理傷害",
+      "target": "Single",
+      "effects": [
+        {
+          "type": "Damage",
+          "side": "Enemy",
+          "damageType": "Physical",
+          "scaleStat": "Attack",
+          "value": 100
+        }
+      ]
+    },
+    "activeSkill": {
+      "name": "劍氣亂舞",
+      "desc": "對敵方隨機3人造成攻擊力180%的物理傷害",
+      "target": "Random3",
+      "effects": [
+        {
+          "type": "Damage",
+          "side": "Enemy",
+          "damageType": "Physical",
+          "scaleStat": "Attack",
+          "value": 180
+        }
+      ]
+    },
+    "passiveSkill": {
+      "name": "戰鬥激勵",
+      "desc": "戰鬥開始時，攻擊力增加20%",
+      "trigger": "BattleStart",
+      "effects": [
+        {
+          "type": "Buff",
+          "side": "Self",
+          "name": "士氣",
+          "stat": "Attack",
+          "value": 20,
+          "permanent": true,
+          "nonRemovable": true
+        }
+      ]
+    },
+    "talentSkill": []
+  },
+  "isEnabled": true
+}

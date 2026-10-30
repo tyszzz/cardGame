@@ -21,6 +21,21 @@ func damageEffect() cards.SkillEffect {
 	}
 }
 
+func buff(mutate func(*cards.SkillEffect)) cards.SkillEffect {
+	e := cards.SkillEffect{Type: constants.EffectTypeBuff, Name: "n", Side: constants.SideAlly, Stat: constants.StatAttack, Value: 20, Duration: 2}
+	mutate(&e)
+	return e
+}
+
+func shield(mutate func(*cards.SkillEffect)) cards.SkillEffect {
+	e := cards.SkillEffect{
+		Type: constants.EffectTypeShield, Name: "聖光護盾", Side: constants.SideAlly,
+		ScaleStat: constants.StatHealth, Value: 20, Duration: 3,
+	}
+	mutate(&e)
+	return e
+}
+
 func skill(name string, trigger constants.Trigger, effects ...cards.SkillEffect) cards.SkillDefinition {
 	return cards.SkillDefinition{Name: name, Trigger: trigger, Target: constants.TargetSingle, Effects: effects}
 }
@@ -133,6 +148,137 @@ func TestSkillRules(t *testing.T) {
 				Type: constants.EffectTypeHeal, Side: constants.SideSelf, ScaleStat: constants.StatAttack, Value: 80,
 			}}
 		}, ""},
+		{"buff missing name", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{buff(func(e *cards.SkillEffect) { e.Name = "" })}
+		}, "name is required for Buff"},
+		{"buff blank name", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{buff(func(e *cards.SkillEffect) { e.Name = "   " })}
+		}, "name must not be blank"},
+		{"buff name 20 chars ok", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{buff(func(e *cards.SkillEffect) { e.Name = strings.Repeat("狂", 20) })}
+		}, ""},
+		{"buff name 21 chars", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{buff(func(e *cards.SkillEffect) { e.Name = strings.Repeat("狂", 21) })}
+		}, "at most 20 characters"},
+		{"status missing name", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{
+				Type: constants.EffectTypeStatus, Side: constants.SideEnemy, Status: constants.StatusStun, Duration: 1,
+			}}
+		}, "name is required for Status"},
+		{"two poisons with different names ok", func(d *cards.CardDefinition) {
+			poison := func(name string, value int) cards.SkillEffect {
+				return cards.SkillEffect{
+					Type: constants.EffectTypeStatus, Name: name, Side: constants.SideEnemy, Status: constants.StatusPoison,
+					Duration: 3, ScaleStat: constants.StatAttack, Value: value,
+				}
+			}
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{poison("A毒", 30), poison("B毒", 50)}
+		}, ""},
+		{"damage with name", func(d *cards.CardDefinition) { d.SkillConfig.NormalAtk.Effects[0].Name = "x" }, "name is not allowed"},
+		{"rage with name", func(d *cards.CardDefinition) {
+			d.SkillConfig.NormalAtk.Effects = []cards.SkillEffect{{Type: constants.EffectTypeRage, Name: "x", Side: constants.SideSelf, Value: 20}}
+		}, "name is not allowed"},
+		{"dispel with name", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{Type: constants.EffectTypeDispel, Name: "x", Side: constants.SideEnemy}}
+		}, "name is not allowed"},
+		{"shield ok", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{shield(func(*cards.SkillEffect) {})}
+		}, ""},
+		{"shield on self ok", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Target = 0
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{shield(func(e *cards.SkillEffect) { e.Side = constants.SideSelf })}
+		}, ""},
+		{"shield permanent nonRemovable ok", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{shield(func(e *cards.SkillEffect) {
+				e.Duration, e.Permanent, e.NonRemovable = 0, true, true
+			})}
+		}, ""},
+		{"shield permanent with duration", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{shield(func(e *cards.SkillEffect) { e.Permanent = true })}
+		}, "duration must not be set when permanent"},
+		{"shield on enemy", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{shield(func(e *cards.SkillEffect) { e.Side = constants.SideEnemy })}
+		}, "Shield is only allowed"},
+		{"shield missing name", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{shield(func(e *cards.SkillEffect) { e.Name = "" })}
+		}, "name is required for Shield"},
+		{"shield missing scaleStat", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{shield(func(e *cards.SkillEffect) { e.ScaleStat = 0 })}
+		}, "scaleStat is required"},
+		{"shield missing value", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{shield(func(e *cards.SkillEffect) { e.Value = 0 })}
+		}, "value is required"},
+		{"shield negative value", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{shield(func(e *cards.SkillEffect) { e.Value = -5 })}
+		}, "value must be positive"},
+		{"shield missing duration", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{shield(func(e *cards.SkillEffect) { e.Duration = 0 })}
+		}, "duration is required"},
+		{"shield with stat", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{shield(func(e *cards.SkillEffect) { e.Stat = constants.StatAttack })}
+		}, "stat is not allowed"},
+		{"shield with maxStack", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{shield(func(e *cards.SkillEffect) { e.MaxStack = 2 })}
+		}, "maxStack is not allowed"},
+		{"shield with damageType", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{shield(func(e *cards.SkillEffect) { e.DamageType = constants.DamageTypeMagic })}
+		}, "damageType is not allowed"},
+		{"buff permanent ok", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{buff(func(e *cards.SkillEffect) { e.Duration = 0; e.Permanent = true })}
+		}, ""},
+		{"buff permanent with duration", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{buff(func(e *cards.SkillEffect) { e.Permanent = true })}
+		}, "duration must not be set when permanent"},
+		{"buff nonRemovable ok", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{buff(func(e *cards.SkillEffect) { e.NonRemovable = true })}
+		}, ""},
+		{"damage with permanent", func(d *cards.CardDefinition) { d.SkillConfig.NormalAtk.Effects[0].Permanent = true }, "permanent is not allowed"},
+		{"damage with nonRemovable", func(d *cards.CardDefinition) { d.SkillConfig.NormalAtk.Effects[0].NonRemovable = true }, "nonRemovable is not allowed"},
+		{"stun nonRemovable ok", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{
+				Type: constants.EffectTypeStatus, Name: "n", Side: constants.SideEnemy, Status: constants.StatusStun, Duration: 1, NonRemovable: true,
+			}}
+		}, ""},
+		{"poison nonRemovable ok", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{
+				Type: constants.EffectTypeStatus, Name: "n", Side: constants.SideEnemy, Status: constants.StatusPoison, Duration: 3,
+				ScaleStat: constants.StatAttack, Value: 30, NonRemovable: true,
+			}}
+		}, ""},
+		{"status with permanent", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{
+				Type: constants.EffectTypeStatus, Name: "n", Side: constants.SideEnemy, Status: constants.StatusStun, Duration: 1, Permanent: true,
+			}}
+		}, "duration must not be set when permanent"},
+		{"dispel enemy ok", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{Type: constants.EffectTypeDispel, Side: constants.SideEnemy}}
+		}, ""},
+		{"dispel with count ok", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{Type: constants.EffectTypeDispel, Side: constants.SideEnemy, Count: 2}}
+		}, ""},
+		{"dispel negative count", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{Type: constants.EffectTypeDispel, Side: constants.SideEnemy, Count: -1}}
+		}, "must not be negative"},
+		{"dispel on ally", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{Type: constants.EffectTypeDispel, Side: constants.SideAlly}}
+		}, "Dispel is only allowed"},
+		{"dispel on self", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{Type: constants.EffectTypeDispel, Side: constants.SideSelf}}
+		}, "Dispel is only allowed"},
+		{"dispel with value", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{Type: constants.EffectTypeDispel, Side: constants.SideEnemy, Value: 10}}
+		}, "value is not allowed"},
+		{"cleanse ally ok", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{Type: constants.EffectTypeCleanse, Side: constants.SideAlly, Count: 1}}
+		}, ""},
+		{"cleanse self ok", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Target = 0
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{Type: constants.EffectTypeCleanse, Side: constants.SideSelf}}
+		}, ""},
+		{"cleanse on enemy", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{Type: constants.EffectTypeCleanse, Side: constants.SideEnemy}}
+		}, "Cleanse is only allowed"},
+		{"count on damage", func(d *cards.CardDefinition) { d.SkillConfig.NormalAtk.Effects[0].Count = 1 }, "count is not allowed"},
 		{"rage gain ok", func(d *cards.CardDefinition) {
 			d.SkillConfig.NormalAtk.Effects = []cards.SkillEffect{{Type: constants.EffectTypeRage, Side: constants.SideSelf, Value: 20}}
 		}, ""},
@@ -197,42 +343,42 @@ func TestSkillRules(t *testing.T) {
 		}, ""},
 		{"buff negative ok", func(d *cards.CardDefinition) {
 			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{
-				Type: constants.EffectTypeBuff, Side: constants.SideEnemy, Stat: constants.StatDefense, Value: -20, Duration: 2, MaxStack: 3,
+				Type: constants.EffectTypeBuff, Name: "n", Side: constants.SideEnemy, Stat: constants.StatDefense, Value: -20, Duration: 2, MaxStack: 3,
 			}}
 		}, ""},
 		{"buff without duration", func(d *cards.CardDefinition) {
 			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{
-				Type: constants.EffectTypeBuff, Side: constants.SideEnemy, Stat: constants.StatDefense, Value: -20,
+				Type: constants.EffectTypeBuff, Name: "n", Side: constants.SideEnemy, Stat: constants.StatDefense, Value: -20,
 			}}
 		}, "duration is required"},
 		{"buff with scaleStat", func(d *cards.CardDefinition) {
 			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{
-				Type: constants.EffectTypeBuff, Side: constants.SideEnemy, Stat: constants.StatDefense, Value: -20, Duration: 2, ScaleStat: constants.StatAttack,
+				Type: constants.EffectTypeBuff, Name: "n", Side: constants.SideEnemy, Stat: constants.StatDefense, Value: -20, Duration: 2, ScaleStat: constants.StatAttack,
 			}}
 		}, "scaleStat is not allowed"},
 		{"stun ok", func(d *cards.CardDefinition) {
 			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{
-				Type: constants.EffectTypeStatus, Side: constants.SideEnemy, Status: constants.StatusStun, Duration: 1,
+				Type: constants.EffectTypeStatus, Name: "n", Side: constants.SideEnemy, Status: constants.StatusStun, Duration: 1,
 			}}
 		}, ""},
 		{"stun with value", func(d *cards.CardDefinition) {
 			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{
-				Type: constants.EffectTypeStatus, Side: constants.SideEnemy, Status: constants.StatusStun, Duration: 1, Value: 10,
+				Type: constants.EffectTypeStatus, Name: "n", Side: constants.SideEnemy, Status: constants.StatusStun, Duration: 1, Value: 10,
 			}}
 		}, "value is not allowed"},
 		{"poison ok", func(d *cards.CardDefinition) {
 			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{
-				Type: constants.EffectTypeStatus, Side: constants.SideEnemy, Status: constants.StatusPoison, Duration: 3, ScaleStat: constants.StatAttack, Value: 30,
+				Type: constants.EffectTypeStatus, Name: "n", Side: constants.SideEnemy, Status: constants.StatusPoison, Duration: 3, ScaleStat: constants.StatAttack, Value: 30,
 			}}
 		}, ""},
 		{"poison without value", func(d *cards.CardDefinition) {
 			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{
-				Type: constants.EffectTypeStatus, Side: constants.SideEnemy, Status: constants.StatusPoison, Duration: 3,
+				Type: constants.EffectTypeStatus, Name: "n", Side: constants.SideEnemy, Status: constants.StatusPoison, Duration: 3,
 			}}
 		}, "required"},
 		{"status effect without status", func(d *cards.CardDefinition) {
 			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{
-				Type: constants.EffectTypeStatus, Side: constants.SideEnemy, Duration: 3,
+				Type: constants.EffectTypeStatus, Name: "n", Side: constants.SideEnemy, Duration: 3,
 			}}
 		}, "invalid status"},
 	}
