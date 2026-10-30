@@ -14,6 +14,7 @@ const (
 	TargetFrontRow Target = 4 // 前排
 	TargetBackRow  Target = 5 // 後排
 	TargetColumn   Target = 6 // 縱排
+	TargetOpposite Target = 7 // 對位（正對面的敵人）
 )
 
 var targetValueToName = map[Target]string{
@@ -23,6 +24,7 @@ var targetValueToName = map[Target]string{
 	TargetFrontRow: "FrontRow",
 	TargetBackRow:  "BackRow",
 	TargetColumn:   "Column",
+	TargetOpposite: "Opposite",
 }
 
 var targetNameToValue = map[string]Target{
@@ -32,6 +34,7 @@ var targetNameToValue = map[string]Target{
 	"FrontRow": TargetFrontRow,
 	"BackRow":  TargetBackRow,
 	"Column":   TargetColumn,
+	"Opposite": TargetOpposite,
 }
 
 func (v Target) String() string {

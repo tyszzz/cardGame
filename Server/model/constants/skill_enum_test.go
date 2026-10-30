@@ -22,8 +22,11 @@ func TestSkillEnumsJSONRoundTrip(t *testing.T) {
 		dst  any
 	}{
 		{"trigger", trigger, `"RoundEnd"`, new(Trigger)},
+		{"triggerBattleStart", TriggerBattleStart, `"BattleStart"`, new(Trigger)},
 		{"target", target, `"Column"`, new(Target)},
+		{"targetOpposite", TargetOpposite, `"Opposite"`, new(Target)},
 		{"effectType", typ, `"Buff"`, new(EffectType)},
+		{"effectTypeRage", EffectTypeRage, `"Rage"`, new(EffectType)},
 		{"stat", stat, `"Defense"`, new(Stat)},
 		{"status", status, `"Burn"`, new(Status)},
 		{"damageType", dmg, `"True"`, new(DamageType)},

@@ -264,16 +264,17 @@
 
     // 選項需與 Server/model/constants 的 skill_*.go 保持一致。
     const ENUMS = {
-      trigger: [["BeforeRoundStart", "回合開始前"], ["RoundEnd", "回合結束時"], ["BeforeAction", "行動前"], ["AfterAction", "行動後"]],
-      target: [["Single", "單體"], ["Random3", "隨機3人"], ["All", "全體"], ["FrontRow", "前排"], ["BackRow", "後排"], ["Column", "縱排"]],
-      effectType: [["Damage", "傷害"], ["Status", "狀態"], ["Heal", "回血"], ["Buff", "增減屬性"]],
+      trigger: [["BattleStart", "戰鬥開始時"], ["BeforeRoundStart", "回合開始前"], ["RoundEnd", "回合結束時"], ["BeforeAction", "行動前"], ["AfterAction", "行動後"]],
+      target: [["Single", "單體"], ["Opposite", "對位"], ["Random3", "隨機3人"], ["All", "全體"], ["FrontRow", "前排"], ["BackRow", "後排"], ["Column", "縱排"]],
+      effectType: [["Damage", "傷害"], ["Status", "狀態"], ["Heal", "回血"], ["Buff", "增減屬性"], ["Rage", "增減怒氣"]],
       stat: [["Health", "生命"], ["Attack", "攻擊"], ["Defense", "防禦"]],
       status: [["Poison", "中毒"], ["Burn", "燃燒"], ["Stun", "暈眩"]],
       damageType: [["Physical", "物理"], ["Magic", "魔法"], ["True", "真實"]],
       side: [["Enemy", "敵方"], ["Ally", "我方"], ["Self", "自己"]]
     };
     const TALENT_COUNT = { SSR: 3, UR: 4 };
-    const FIXED_SKILLS = [["normalAtk", "普通攻擊"], ["activeSkill", "主動技能"], ["passiveSkill", "被動技能"]];
+    // 第三欄表示是否需要觸發時機：普攻與主動由行動流程和怒氣（滿 100 施放）決定，不填。
+    const FIXED_SKILLS = [["normalAtk", "普通攻擊", false], ["activeSkill", "主動技能", false], ["passiveSkill", "被動技能", true]];
     const DOT_STATUSES = ["Poison", "Burn"];
     // 效果欄位的顯示與輸出順序
     const EFFECT_FIELDS = [
@@ -317,6 +318,7 @@
         case "Damage": return ["damageType", "scaleStat", "value"];
         case "Heal": return ["scaleStat", "value"];
         case "Buff": return ["stat", "value", "duration", "maxStack"];
+        case "Rage": return ["value"];
         case "Status":
           if (!status) return ["status"];
           return DOT_STATUSES.includes(status)
@@ -356,6 +358,8 @@
         const visible = effectFieldsFor(refs.type.value, refs.status.value);
         for (const [key] of EFFECT_FIELDS) wrappers[key].hidden = !visible.includes(key);
         wrappers.target.hidden = refs.side.value === "Self";
+        wrappers.value.querySelector("label").textContent =
+          refs.type.value === "Rage" ? "怒氣點數（可為負）" : "數值（%）";
       }
       for (const key of ["type", "side", "status"]) refs[key].addEventListener("change", refresh);
       removeButton.addEventListener("click", () => {
@@ -378,13 +382,14 @@
       renumberEffects(effectsEl);
     }
 
-    function createSkill(title, talent) {
+    function createSkill(title, talent, hasTrigger) {
       const refs = {
         name: el("input", { maxLength: 100, placeholder: "技能名稱" }),
         desc: el("textarea", { rows: 2, placeholder: "技能描述" }),
         trigger: makeSelect("trigger", "請選擇"),
         target: makeSelect("target", "（無）")
       };
+      const wrappers = {};
       const effectsEl = el("div", { className: "effects" });
       const addButton = el("button", { type: "button", className: "secondary small add-effect", textContent: "新增效果" });
       addButton.addEventListener("click", () => addEffect(effectsEl));
@@ -392,7 +397,7 @@
       const body = el("div", { className: "skill-body" }, [
         el("div", { className: "grid-3" }, [
           labeled("名稱", refs.name),
-          labeled("觸發時機", refs.trigger),
+          (wrappers.trigger = labeled("觸發時機", refs.trigger)),
           labeled("預設目標形狀", refs.target)
         ]),
         labeled("描述", refs.desc)
@@ -405,7 +410,9 @@
       body.append(effectsEl, addButton);
 
       const node = el("details", { className: "skill", open: true }, [el("summary", { textContent: title }), body]);
+      wrappers.trigger.hidden = !hasTrigger;
       node._refs = refs;
+      node._hasTrigger = hasTrigger;
       node._effectsEl = effectsEl;
       addEffect(effectsEl);
       return node;
@@ -427,14 +434,14 @@
         removed.forEach((node) => node.remove());
       }
       for (let i = skillsTalent.children.length; i < needed; i++) {
-        skillsTalent.append(createSkill(`天賦 ${i + 1}`, true));
+        skillsTalent.append(createSkill(`天賦 ${i + 1}`, true, true));
       }
       skillsTalentWrap.hidden = needed === 0;
       return true;
     }
 
     function resetSkills() {
-      skillsFixed.replaceChildren(...FIXED_SKILLS.map(([, label]) => createSkill(label, false)));
+      skillsFixed.replaceChildren(...FIXED_SKILLS.map(([, label, hasTrigger]) => createSkill(label, false, hasTrigger)));
       skillsTalent.replaceChildren();
       syncTalents();
     }
@@ -459,6 +466,9 @@
       if (side !== "Self") {
         if (refs.target.value) effect.target = refs.target.value;
         else if (!skillTarget) throw new Error("請指定目標形狀（效果或技能的預設目標）。");
+        if (side === "Ally" && (refs.target.value || skillTarget) === "Opposite") {
+          throw new Error("對位只能用於敵方。");
+        }
       }
 
       const visible = effectFieldsFor(type, refs.status.value);
@@ -468,7 +478,7 @@
           if (!refs[key].value) throw new Error(`請選擇${label}。`);
           effect[key] = refs[key].value;
         } else if (key === "value") {
-          effect.value = type === "Buff"
+          effect.value = type === "Buff" || type === "Rage"
             ? readInt(refs.value, label, { allowNegative: true, nonZero: true })
             : readInt(refs.value, label, { min: 1 });
         } else if (key === "duration") {
@@ -485,9 +495,10 @@
       const r = node._refs;
       const name = r.name.value.trim();
       if (!name) throw new Error("名稱不可為空。");
-      if (!r.trigger.value) throw new Error("請選擇觸發時機。");
+      if (node._hasTrigger && !r.trigger.value) throw new Error("請選擇觸發時機。");
 
-      const skill = { name, desc: r.desc.value.trim(), trigger: r.trigger.value };
+      const skill = { name, desc: r.desc.value.trim() };
+      if (node._hasTrigger) skill.trigger = r.trigger.value;
       if (r.target.value) skill.target = r.target.value;
       if (talent) {
         const star = r.star.value.trim() === "" ? 0 : readInt(r.star, "解鎖星數");

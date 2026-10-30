@@ -153,6 +153,15 @@ PGPASSWORD=... psql -h 127.0.0.1 -p 5433 -U tyszzz -d tyszzz -f migration/000001
 
 原本的 `database/postgrator` 是 glibc binary，在 Alpine musl 執行時出現 relocation errors，因此不建議繼續使用。Docker migration 也受限於目前環境沒有 Docker daemon。
 
+## 卡片、抽卡與怒氣規則
+
+- 卡片定義以 JSON 維護於 `database/seed/<version>/cards/*.json`（可用 `tools/card-editor.html` 產生），再以 `go run ./cmd/cardseed <version>`（在 `Server/` 下）轉成 `cards.sql`，由 `database/seed.sh` 匯入。`cardseed` 會驗證欄位、稀有度與技能規則。
+- 技能：每張卡都有普攻、主動、被動；天賦僅 SSR（3 個）與 UR（4 個）有。普攻與主動技能不填 `trigger`，被動與天賦才由 `trigger` 決定發動時機。
+- 怒氣（所有卡共用，常數見 `model/constants/rage.go`）：初始 50，滿 100 才施放主動技能，施放後扣 100 並保留剩餘；怒氣上限與累積方式（普攻、受傷等）待戰鬥系統設計時決定。效果類型 `Rage` 可增減怒氣，`value` 為固定點數（可為負），其餘效果的 `value` 為百分比。
+- 抽卡：Normal（Coin 5000）、Friend（FriendPoint 20）、Diamond（Diamond 200）；單抽或十連，十連不打折，Diamond 十連 1800 且至少一張 SSR 以上。Normal 與 Friend 只出 R、SR（70:30），Diamond 為 R、SR、SSR、UR（50:30:18:2）。同稀有度內機率均等。
+- 玩家對每張卡最多持有一張（`player_cards` 有 `UNIQUE (uid, card_id)`）；抽到重複的卡改給碎片放入背包：R 30、SR 30、SSR 10、UR 5。無卡片容量限制。
+- 卡池於 server 啟動後第一次抽卡時載入記憶體，新增或停用卡片需重啟 server。
+
 ## Logger
 
 目前 logger 特性：

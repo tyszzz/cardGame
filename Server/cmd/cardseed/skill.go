@@ -38,38 +38,55 @@ var effectFieldNames = []struct {
 	{fMaxStack, "maxStack"},
 }
 
+// slotRule 描述技能欄位的差異：普攻與主動由行動流程和怒氣決定發動，不填 trigger；
+// 被動與天賦由 trigger 決定發動時機；只有天賦需要解鎖條件。
+type slotRule struct {
+	trigger bool
+	talent  bool
+}
+
+var (
+	normalSlot  = slotRule{}
+	activeSlot  = slotRule{}
+	passiveSlot = slotRule{trigger: true}
+	talentSlot  = slotRule{trigger: true, talent: true}
+)
+
 func validateSkills(rarity constants.Rarity, cfg *cards.SkillConfig) error {
-	if err := validateSkill(&cfg.NormalAtk, false); err != nil {
+	if err := validateSkill(&cfg.NormalAtk, normalSlot); err != nil {
 		return fmt.Errorf("skillConfig.normalAtk: %w", err)
 	}
-	if err := validateSkill(&cfg.ActiveSkill, false); err != nil {
+	if err := validateSkill(&cfg.ActiveSkill, activeSlot); err != nil {
 		return fmt.Errorf("skillConfig.activeSkill: %w", err)
 	}
-	if err := validateSkill(&cfg.PassiveSkill, false); err != nil {
+	if err := validateSkill(&cfg.PassiveSkill, passiveSlot); err != nil {
 		return fmt.Errorf("skillConfig.passiveSkill: %w", err)
 	}
 	if want := talentCountByRarity[rarity]; len(cfg.TalentSkill) != want {
 		return fmt.Errorf("skillConfig.talentSkill: %s requires %d talents, got %d", rarity, want, len(cfg.TalentSkill))
 	}
 	for i := range cfg.TalentSkill {
-		if err := validateSkill(&cfg.TalentSkill[i], true); err != nil {
+		if err := validateSkill(&cfg.TalentSkill[i], talentSlot); err != nil {
 			return fmt.Errorf("skillConfig.talentSkill[%d]: %w", i, err)
 		}
 	}
 	return nil
 }
 
-func validateSkill(s *cards.SkillDefinition, talent bool) error {
+func validateSkill(s *cards.SkillDefinition, slot slotRule) error {
 	if s.Name == "" {
 		return fmt.Errorf("name must not be empty")
 	}
-	if !s.Trigger.Valid() {
+	switch {
+	case slot.trigger && !s.Trigger.Valid():
 		return fmt.Errorf("invalid trigger: %d", s.Trigger)
+	case !slot.trigger && s.Trigger != 0:
+		return fmt.Errorf("trigger is not allowed on normalAtk/activeSkill")
 	}
 	if s.Target != 0 && !s.Target.Valid() {
 		return fmt.Errorf("invalid target: %d", s.Target)
 	}
-	if err := validateUnlock(s.Unlock, talent); err != nil {
+	if err := validateUnlock(s.Unlock, slot.talent); err != nil {
 		return err
 	}
 	if len(s.Effects) == 0 {
@@ -115,6 +132,14 @@ func validateEffect(e *cards.SkillEffect, skillTarget constants.Target) error {
 		}
 	} else if e.Target == 0 && skillTarget == 0 {
 		return fmt.Errorf("target is required (effect or skill level) when side is %s", e.Side)
+	}
+	// 對位指正對面的敵人，對我方沒有意義
+	effectiveTarget := e.Target
+	if effectiveTarget == 0 {
+		effectiveTarget = skillTarget
+	}
+	if e.Side == constants.SideAlly && effectiveTarget == constants.TargetOpposite {
+		return fmt.Errorf("target Opposite is only allowed when side is Enemy")
 	}
 	if e.Duration < 0 || e.MaxStack < 0 {
 		return fmt.Errorf("duration/maxStack must not be negative")
@@ -162,6 +187,8 @@ func effectRule(e *cards.SkillEffect) (required, optional effectField, err error
 		return fScaleStat | fValue, 0, nil
 	case constants.EffectTypeBuff:
 		return fStat | fValue | fDuration, fMaxStack, nil
+	case constants.EffectTypeRage:
+		return fValue, 0, nil // value 為固定怒氣點數，可為負
 	case constants.EffectTypeStatus:
 		if !e.Status.Valid() {
 			return 0, 0, fmt.Errorf("invalid status: %d", e.Status)

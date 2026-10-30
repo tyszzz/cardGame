@@ -41,8 +41,8 @@ func validDef() cards.CardDefinition {
 			Attack: 10, AttackRatio: 0.1, Defense: 5, DefenseRatio: 0.05, Health: 100, HealthRatio: 0.2,
 		},
 		SkillConfig: cards.SkillConfig{
-			NormalAtk:    skill("normal", constants.TriggerBeforeAction, damageEffect()),
-			ActiveSkill:  skill("active", constants.TriggerAfterAction, damageEffect()),
+			NormalAtk:    skill("normal", 0, damageEffect()),
+			ActiveSkill:  skill("active", 0, damageEffect()),
 			PassiveSkill: skill("passive", constants.TriggerBeforeRoundStart, damageEffect()),
 		},
 		IsEnabled: true,
@@ -76,7 +76,7 @@ func TestParseCard(t *testing.T) {
 		{"bad race", strings.Replace(validStr, `"Dragon"`, `"Cat"`, 1), "Race"},
 		{"unknown field", strings.Replace(validStr, `"cardName"`, `"cardNmae"`, 1), "unknown field"},
 		{"removed condition field", strings.Replace(validStr, `"name":"normal"`, `"name":"normal","condition":{}`, 1), "unknown field"},
-		{"bad trigger", strings.Replace(validStr, `"BeforeAction"`, `"Never"`, 1), "Trigger"},
+		{"bad trigger", strings.Replace(validStr, `"BeforeRoundStart"`, `"Never"`, 1), "Trigger"},
 		{"negative attack", strings.Replace(validStr, `"attack":10`, `"attack":-1`, 1), "negative"},
 		{"negative ratio", strings.Replace(validStr, `"healthRatio":0.2`, `"healthRatio":-0.2`, 1), "negative"},
 		{"empty id", strings.Replace(validStr, `"card_001"`, `""`, 1), "cardId"},
@@ -104,6 +104,50 @@ func TestSkillRules(t *testing.T) {
 		wantErr string
 	}{
 		{"valid", func(d *cards.CardDefinition) {}, ""},
+		{"normal atk with trigger", func(d *cards.CardDefinition) { d.SkillConfig.NormalAtk.Trigger = constants.TriggerAfterAction }, "trigger is not allowed"},
+		{"active with trigger", func(d *cards.CardDefinition) { d.SkillConfig.ActiveSkill.Trigger = constants.TriggerBeforeAction }, "trigger is not allowed"},
+		{"passive without trigger", func(d *cards.CardDefinition) { d.SkillConfig.PassiveSkill.Trigger = 0 }, "invalid trigger"},
+		{"talent without trigger", func(d *cards.CardDefinition) {
+			d.Rarity = constants.RaritySSR
+			t := talent("c")
+			t.Trigger = 0
+			d.SkillConfig.TalentSkill = []cards.SkillDefinition{talent("a"), talent("b"), t}
+		}, "invalid trigger"},
+		{"battle start trigger ok", func(d *cards.CardDefinition) { d.SkillConfig.PassiveSkill.Trigger = constants.TriggerBattleStart }, ""},
+		{"opposite on enemy ok", func(d *cards.CardDefinition) { d.SkillConfig.NormalAtk.Effects[0].Target = constants.TargetOpposite }, ""},
+		{"opposite as skill default on enemy ok", func(d *cards.CardDefinition) { d.SkillConfig.NormalAtk.Target = constants.TargetOpposite }, ""},
+		{"opposite on ally rejected", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{
+				Type: constants.EffectTypeHeal, Side: constants.SideAlly, Target: constants.TargetOpposite, ScaleStat: constants.StatAttack, Value: 80,
+			}}
+		}, "Opposite is only allowed"},
+		{"opposite skill default with ally effect rejected", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Target = constants.TargetOpposite
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{
+				Type: constants.EffectTypeHeal, Side: constants.SideAlly, ScaleStat: constants.StatAttack, Value: 80,
+			}}
+		}, "Opposite is only allowed"},
+		{"opposite skill default with self effect ok", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Target = constants.TargetOpposite
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{
+				Type: constants.EffectTypeHeal, Side: constants.SideSelf, ScaleStat: constants.StatAttack, Value: 80,
+			}}
+		}, ""},
+		{"rage gain ok", func(d *cards.CardDefinition) {
+			d.SkillConfig.NormalAtk.Effects = []cards.SkillEffect{{Type: constants.EffectTypeRage, Side: constants.SideSelf, Value: 20}}
+		}, ""},
+		{"rage drain enemy ok", func(d *cards.CardDefinition) {
+			d.SkillConfig.ActiveSkill.Effects = []cards.SkillEffect{{Type: constants.EffectTypeRage, Side: constants.SideEnemy, Target: constants.TargetAll, Value: -30}}
+		}, ""},
+		{"rage zero value", func(d *cards.CardDefinition) {
+			d.SkillConfig.NormalAtk.Effects = []cards.SkillEffect{{Type: constants.EffectTypeRage, Side: constants.SideSelf}}
+		}, "value is required"},
+		{"rage with scaleStat", func(d *cards.CardDefinition) {
+			d.SkillConfig.NormalAtk.Effects = []cards.SkillEffect{{Type: constants.EffectTypeRage, Side: constants.SideSelf, Value: 20, ScaleStat: constants.StatAttack}}
+		}, "scaleStat is not allowed"},
+		{"rage with duration", func(d *cards.CardDefinition) {
+			d.SkillConfig.NormalAtk.Effects = []cards.SkillEffect{{Type: constants.EffectTypeRage, Side: constants.SideSelf, Value: 20, Duration: 2}}
+		}, "duration is not allowed"},
 		{"missing normal atk", func(d *cards.CardDefinition) { d.SkillConfig.NormalAtk = cards.SkillDefinition{} }, "normalAtk"},
 		{"missing active", func(d *cards.CardDefinition) { d.SkillConfig.ActiveSkill = cards.SkillDefinition{} }, "activeSkill"},
 		{"missing passive", func(d *cards.CardDefinition) { d.SkillConfig.PassiveSkill = cards.SkillDefinition{} }, "passiveSkill"},
@@ -216,7 +260,7 @@ func TestSQLEscapesAndMapsEnums(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := c.sql()
-	for _, want := range []string{"'O''Brien'", "VALUES ('card_001', 'O''Brien', 2, 4,", `"trigger":"BeforeAction"`, "ON CONFLICT (card_id) DO UPDATE"} {
+	for _, want := range []string{"'O''Brien'", "VALUES ('card_001', 'O''Brien', 2, 4,", `"trigger":"BeforeRoundStart"`, "ON CONFLICT (card_id) DO UPDATE"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("sql missing %q:\n%s", want, got)
 		}

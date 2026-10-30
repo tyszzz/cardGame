@@ -12,6 +12,7 @@ const (
 	TriggerRoundEnd         Trigger = 2 // 回合結束時
 	TriggerBeforeAction     Trigger = 3 // 行動前
 	TriggerAfterAction      Trigger = 4 // 行動後
+	TriggerBattleStart      Trigger = 5 // 戰鬥開始時
 )
 
 var triggerValueToName = map[Trigger]string{
@@ -19,6 +20,7 @@ var triggerValueToName = map[Trigger]string{
 	TriggerRoundEnd:         "RoundEnd",
 	TriggerBeforeAction:     "BeforeAction",
 	TriggerAfterAction:      "AfterAction",
+	TriggerBattleStart:      "BattleStart",
 }
 
 var triggerNameToValue = map[string]Trigger{
@@ -26,6 +28,7 @@ var triggerNameToValue = map[string]Trigger{
 	"RoundEnd":         TriggerRoundEnd,
 	"BeforeAction":     TriggerBeforeAction,
 	"AfterAction":      TriggerAfterAction,
+	"BattleStart":      TriggerBattleStart,
 }
 
 func (v Trigger) String() string {

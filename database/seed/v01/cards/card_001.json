@@ -15,7 +15,6 @@
     "normalAtk": {
       "name": "Normal Attack",
       "desc": "對單體敵人造成 100% 攻擊力的物理傷害。",
-      "trigger": "AfterAction",
       "target": "Single",
       "effects": [
         {
@@ -30,7 +29,6 @@
     "activeSkill": {
       "name": "Test Active",
       "desc": "對全體敵人造成 80% 攻擊力的魔法傷害。",
-      "trigger": "BeforeAction",
       "target": "All",
       "effects": [
         {

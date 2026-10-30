@@ -12,6 +12,7 @@ const (
 	EffectTypeStatus EffectType = 2 // 狀態
 	EffectTypeHeal   EffectType = 3 // 回血
 	EffectTypeBuff   EffectType = 4 // 增減屬性
+	EffectTypeRage   EffectType = 5 // 增減怒氣
 )
 
 var effectTypeValueToName = map[EffectType]string{
@@ -19,6 +20,7 @@ var effectTypeValueToName = map[EffectType]string{
 	EffectTypeStatus: "Status",
 	EffectTypeHeal:   "Heal",
 	EffectTypeBuff:   "Buff",
+	EffectTypeRage:   "Rage",
 }
 
 var effectTypeNameToValue = map[string]EffectType{
@@ -26,6 +28,7 @@ var effectTypeNameToValue = map[string]EffectType{
 	"Status": EffectTypeStatus,
 	"Heal":   EffectTypeHeal,
 	"Buff":   EffectTypeBuff,
+	"Rage":   EffectTypeRage,
 }
 
 func (v EffectType) String() string {
