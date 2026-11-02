@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Card Game</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <main class="app">
+    <section id="login-view" class="panel view">
+      <h1>Card Game</h1>
+      <form id="login-form" autocomplete="on">
+        <label>帳號
+          <input id="login-account" name="username" autocomplete="username" required>
+        </label>
+        <label>密碼
+          <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <button id="login-button" class="primary" type="submit">登入</button>
+        <button id="to-register" class="link" type="button">建立帳號</button>
+        <p id="login-status" class="status" role="status"></p>
+      </form>
+    </section>
+
+    <section id="register-view" class="panel view" hidden>
+      <h1>建立帳號</h1>
+      <form id="register-form" autocomplete="off">
+        <label>帳號
+          <input id="register-account" required>
+        </label>
+        <label>密碼
+          <input id="register-password" type="password" autocomplete="new-password" required>
+        </label>
+        <label>暱稱
+          <input id="register-nickname" required>
+        </label>
+        <button id="register-button" class="primary" type="submit">建立帳號</button>
+        <button id="to-login" class="link" type="button">返回登入</button>
+        <p id="register-status" class="status" role="status"></p>
+      </form>
+    </section>
+
+    <section id="game-view" class="view" hidden>
+      <header class="panel topbar">
+        <div>
+          <div class="muted">登入帳號</div>
+          <strong id="account-name"></strong>
+        </div>
+        <div id="currencies" class="currencies"></div>
+        <button id="logout-button" class="link" type="button">登出</button>
+      </header>
+
+      <section class="panel">
+        <h2>召喚</h2>
+        <div id="pools" class="pools"></div>
+        <p id="game-status" class="status" role="status"></p>
+      </section>
+
+      <section class="panel">
+        <h2>結果</h2>
+        <div id="cards" class="cards"></div>
+        <p id="pity" class="muted"></p>
+        <pre id="log" class="log"></pre>
+      </section>
+    </section>
+  </main>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

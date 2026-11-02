@@ -11,22 +11,6 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/Server"
-        },
-        {
-            "name": "Launch Client (Python)",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/clients/main.py",
-            "console": "integratedTerminal"
-        }
-    ],
-    "compounds": [
-        {
-            "name": "Run Server and Client",
-            "configurations": [
-                "Launch Server (Go)",
-                "Launch Client (Python)"
-            ]
         }
     ]
 }

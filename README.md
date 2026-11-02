@@ -37,8 +37,11 @@ self create game
     - 全專案共用的基礎工具
     - logger，環境變數，Pitaya 初始化與共用 helper
 
-### clients
-- Python tkinter 測試 client 與 Pitaya protocol
+### web
+- 網頁測試 client（純 HTML/JS/CSS，無建置步驟）
+    - `js/pitaya_protocol.js`：Pitaya 封包編解碼
+    - `js/pitaya_client.js`：WebSocket 連線、request/response、push
+    - `js/app.js`：登入、註冊、召喚畫面
 
 ### tools
 - card-editor
@@ -49,168 +52,13 @@ self create game
     - PostgreSQL schema migration
 - seed
     - 各版本的卡片定義
-## Python virtual environment
 
-前端測試工具使用 Python 虛擬環境，避免直接修改系統 Python。以下指令請在專案根目錄執行：
+## 網頁 client
 
-### 建立虛擬環境
-
-```bash
-cd /cardGame
-python3 -m venv .venv
-```
-
-### 啟用虛擬環境
+網頁使用瀏覽器原生 WebSocket 連到 Pitaya，不需要安裝任何套件。ES module 無法從 `file://` 載入，請用靜態伺服器開啟：
 
 ```bash
-cd /cardGame
-source .venv/bin/activate
+python3 -m http.server -d web 5173
 ```
 
-啟用成功後，終端機提示字元會出現 `(.venv)`。
-
-### 安裝前端測試套件
-
-```bash
-python -m pip install --upgrade pip
-python -m pip install websocket-client
-```
-
-確認套件是否安裝成功：
-
-```bash
-python -c "import websocket; print(websocket.__version__)"
-```
-
-套件名稱是 `websocket-client`，但 Python 程式中的 import 名稱是 `websocket`。
-
-### 安裝 tkinter 與系統字型
-
-`tkinter` 和系統字型不是使用 `pip` 安裝，而是使用 Alpine Linux 的套件管理工具：
-
-```bash
-sudo apk add --no-cache python3-tkinter fontconfig ttf-dejavu ttf-liberation
-fc-cache -f -v
-```
-
-確認 tkinter 與系統字型是否可用：
-
-```bash
-python -c "import tkinter; print(tkinter.TkVersion)"
-fc-list | head
-```
-
-如果 `python3 -m venv .venv` 顯示 `ensurepip is not available`，可以改用 Alpine 的虛擬環境工具：
-
-```bash
-sudo apk add --no-cache py3-virtualenv
-virtualenv .venv
-source .venv/bin/activate
-python -m pip install websocket-client
-```
-
-### 重新啟用既有虛擬環境
-
-重新開啟終端機或 VS Code 後，不需要重新建立虛擬環境，只需要再次執行：
-
-```bash
-cd /cardGame
-source .venv/bin/activate
-```
-
-### 離開虛擬環境
-
-```bash
-deactivate
-```
-
-### VS Code interpreter
-
-在 VS Code 執行 `Python: Select Interpreter`，選擇：
-
-```text
-/cardGame/.venv/bin/python
-```
-
-## Python 前端打包
-
-Python 前端可以使用 PyInstaller 打包成執行檔，使用者不需要另外安裝 Python、tkinter 等套件。
-
-Windows 的 `.exe` 建議在 Windows 環境中打包。Linux 不能直接產生可在 Windows 執行的 `.exe`。
-
-### Windows 安裝打包工具
-
-在 Windows 開啟 PowerShell，進入 `clients` 目錄或專案目錄後執行：
-
-```powershell
-python -m venv .venv
-.venv\Scripts\activate
-python -m pip install --upgrade pip
-python -m pip install websocket-client pyinstaller
-```
-
-### 建立測試版
-
-建議先使用 `--onedir` 測試，輸出內容較容易檢查：
-
-```powershell
-cd clients
-pyinstaller --clean --onedir --name CardGameClient main.py
-```
-
-輸出位置：
-
-```text
-clients\dist\CardGameClient\
-```
-
-測試版若發生錯誤，可以直接在 PowerShell 執行，查看錯誤訊息。
-
-### 建立正式 GUI 版
-
-確認測試版可以正常登入與操作後，使用 `--onefile --windowed` 打包成單一 GUI 執行檔：
-
-```powershell
-cd clients
-pyinstaller --clean --onefile --windowed --name CardGameClient main.py
-```
-
-輸出檔案：
-
-```text
-clients\dist\CardGameClient.exe
-```
-
-`--onefile` 會輸出單一 exe；`--windowed` 執行時不會開啟命令列視窗，適合 tkinter GUI。
-
-### 除錯版本
-
-如果正式 GUI 版沒有顯示錯誤，可以先移除 `--windowed`：
-
-```powershell
-cd clients
-pyinstaller --clean --onefile --name CardGameClient main.py
-```
-
-執行時保留 PowerShell 視窗，可以查看：
-
-- WebSocket 連線錯誤
-- Pitaya handshake 或封包解析錯誤
-- tkinter 啟動錯誤
-- 後端未啟動或無法連線
-
-### 前端檔案
-
-PyInstaller 會依照 `main.py` 的 import 自動尋找同目錄的模組：
-
-```text
-clients/
-    main.py
-    pitaya_client.py
-    pitaya_protocol.py
-```
-
-如果三個檔案位於同一個 `clients` 目錄，通常不需要額外設定 spec 檔案。
-
-
-不建議使用 `--break-system-packages`，以免破壞由系統套件管理的 Python 環境。
+開啟 `http://localhost:5173`。後端位址在 `web/js/app.js` 的 `SERVER_URL`，預設為 `ws://<目前主機>:8080/`。

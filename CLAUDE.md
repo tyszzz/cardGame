@@ -1,11 +1,11 @@
 # CLAUDE.md
 
-卡牌放置遊戲：Go 後端 + Python tkinter 測試前端。詳細背景與進度見 @docs/project-context.md，目錄說明見 @README.md。
+卡牌放置遊戲：Go 後端 + 網頁測試前端。詳細背景與進度見 @docs/project-context.md，目錄說明見 @README.md。
 
 ## 技術棧
 
 - Backend：Go 1.25（以 `Server/go.mod` 為準），Pitaya v2 + WebSocket，PostgreSQL + GORM，未來可能加入 Redis
-- Test client：Python tkinter + `websocket-client`（使用專案根目錄 `.venv`）
+- Test client：純 HTML/JS/CSS 網頁（`web/`），瀏覽器原生 WebSocket，無建置步驟
 
 ## 專案結構
 
@@ -29,7 +29,7 @@ services -> feature
 
 其他目錄：
 
-- `clients/`：`main.py`（tkinter UI）、`pitaya_client.py`、`pitaya_protocol.py`
+- `web/`：`index.html`、`app.css`、`js/app.js`（UI）、`js/pitaya_client.js`、`js/pitaya_protocol.js`
 - `database/`：`migration/`（版本化 SQL schema）、`seed/<version>/`（卡片定義）、`migration.sh`、`seed.sh`
 - `tools/card-editor.html`：產生卡片 JSON 的網頁
 - `docs/project-context.md`：專案背景與進度
@@ -46,7 +46,7 @@ cd Server && go build ./... && go test ./...
 測試 client：
 
 ```bash
-source .venv/bin/activate && python clients/main.py
+python3 -m http.server -d web 5173   # 開啟 http://localhost:5173
 ```
 
 資料庫（兩支腳本皆以 `DATABASE_URL` 環境變數指定連線）：
@@ -59,7 +59,7 @@ database/seed.sh v01         # 套用 database/seed/<version>/*.sql，需指定�
 ## 程式碼規範
 
 - Go 修改後執行 `gofmt`，並跑 `go test ./...` 或至少編譯檢查。
-- Python 修改後做語法、型別或相關測試檢查。
+- JS 修改後至少用 `node --check` 檢查語法；協議變動需與後端實測。
 - PostgreSQL schema 只透過版本化 migration 管理，正式 server **不可** `AutoMigrate`。
 - 重複帳戶判斷依賴 DB primary key/unique constraint，service 捕捉 duplicate key 後轉成業務錯誤。
 - Pitaya response 以匿名嵌入 `BaseResult`（`resultCode`）共用結構。
@@ -70,7 +70,7 @@ database/seed.sh v01         # 套用 database/seed/<version>/*.sql，需指定�
 - 密碼只存 bcrypt/Argon2id hash，不存明文。
 - 不要把密碼、password hash、token、資料庫密碼或其他 secrets 寫入 log、response 或 repository。
 - 不要把資料庫原始錯誤直接回傳給前端。
-- 不要提交 `.venv`、`__pycache__`、secrets。
+- 不要提交 secrets。
 - 若啟用 GORM SQL logging，透過 GORM `logger.Interface` adapter 呼叫 `utils.Log()`，使用 parameterized queries，避免敏感資料進 log。
 
 ## Logger

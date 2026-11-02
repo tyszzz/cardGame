@@ -2,7 +2,7 @@
 
 ## 專案目標
 
-這是一個使用 Go 後端與 Python tkinter 測試前端製作的卡牌放置遊戲，玩法方向類似市面上的卡牌放置遊戲。正式前端尚未以 Cocos 或美術客戶端為目標，目前 tkinter 主要用來測試後端流程。
+這是一個使用 Go 後端與網頁測試前端製作的卡牌放置遊戲，玩法方向類似市面上的卡牌放置遊戲。正式前端尚未以 Cocos 或美術客戶端為目標，目前網頁 client 主要用來測試後端流程。
 
 ## 技術棧
 
@@ -11,8 +11,7 @@
 - Database：PostgreSQL + GORM
 - Migration：SQL migration，現階段可使用 `psql` 執行；原本的 `postgrator` binary 在 Alpine 上有 glibc/musl 相容性問題
 - Cache：未來可能加入 Redis
-- Frontend test client：Python tkinter + `websocket-client`
-- Python packaging：Windows 使用 PyInstaller 打包 `.exe`
+- Frontend test client：`web/` 純 HTML/JS/CSS，瀏覽器原生 WebSocket
 
 ## 後端分層
 
@@ -41,42 +40,35 @@ services
 
 ## 目前功能
 
-### Pitaya Python client
+### Pitaya JS client
 
-`clients/pitaya_client.py` 已支援：
+`web/js/pitaya_client.js` 已支援：
 
-- WebSocket 連線
+- WebSocket 連線（Promise/async API）
 - Pitaya handshake 與 handshake ACK
-- binary request/response
-- request ID 與 receiver thread
+- binary request/response 與 request ID
 - heartbeat 回應
-- route listener：`register_route()` / `unregister_route()`
+- route listener：`registerRoute()` / `unregisterRoute()`
 - client notify/publish：`publish(route, body)`
-- `login()`
-- `create_account()`，route 為 `AccountHandler.CreateNewAccount`
-- `summon()`
+- `login()`、`createAccount()`、`summon()`、`getCurrencies()`
 
-`clients/pitaya_protocol.py` 已處理：
+`web/js/pitaya_protocol.js` 已處理：
 
 - packet header
 - request、notify、response、push message
 - Pitaya message flag
-- zlib compressed response/push
+- zlib compressed response/push（`DecompressionStream`）
 - JSON body
 
-### tkinter 前端
+### 網頁前端
 
-`clients/main.py` 目前包含：
+`web/js/app.js` 目前包含：
 
-- 登入畫面
-- 帳戶 ID 與密碼格式驗證
-- 建立帳戶畫面
-- 建立帳戶成功返回登入畫面
-- 建立帳戶失敗留在註冊畫面並顯示錯誤
-- 登入後遊戲畫面
-- 抽卡按鈕
+- 登入與建立帳戶畫面（含格式驗證與錯誤顯示）
+- 貨幣顯示
+- 多卡池單抽／十連與保底資訊
+- 依稀有度上色的抽卡結果卡片
 - 登出返回登入畫面
-- 結果文字區
 
 前端輸入規則：
 
@@ -186,7 +178,7 @@ PGPASSWORD=... psql -h 127.0.0.1 -p 5433 -U tyszzz -d tyszzz -f migration/000001
 2. 開啟 `.github/copilot-instructions.md`，讓 AI 讀取合作規則。
 3. 開啟本文件 `docs/project-context.md`，讓 AI 恢復專案背景與目前進度。
 4. 若有使用 codebase-memory MCP，重新 index repository 或載入可攜式 index。
-5. 依 README 重建 Go/Python 環境，不要提交 `.venv`、`__pycache__`、密碼或 secrets。
+5. 依 README 重建 Go 環境，不要提交密碼或 secrets。
 6. 在新的 Copilot Chat 中說：
 
 ```text
