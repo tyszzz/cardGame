@@ -47,10 +47,12 @@ func (h *SummonHandler) SummonCard(
 
 	result, err := h.ss.SummonCard(ctx, uid, data)
 	if err != nil {
-		utils.Log().Warnf("UserUid: %s, SummonCard failed, type: %v, times: %d, err: %v", uid, data.SummonType, data.Times, err)
+		utils.Log().Warnf("UserUid: %s, SummonCard failed, pool: %s, times: %d, err: %v", uid, data.PoolId, data.Times, err)
 		resultCode := int32(constants.SummonFailed)
 		switch {
-		case errors.Is(err, summon.ErrInvalidSummonType), errors.Is(err, summon.ErrInvalidTimes):
+		case errors.Is(err, summon.ErrPoolUnavailable):
+			resultCode = constants.SummonPoolUnavailable
+		case errors.Is(err, summon.ErrInvalidTimes):
 			resultCode = constants.SummonInvalidRequest
 		case errors.Is(err, summon.ErrNotEnoughCurrency):
 			resultCode = constants.SummonNotEnoughCurrency
@@ -58,6 +60,6 @@ func (h *SummonHandler) SummonCard(
 		return summonFailed(resultCode), nil
 	}
 	result.ResultCode = constants.Success
-	utils.Log().Infof("UserUid: %s, SummonCard success, type: %v, times: %d, cards: %d", uid, data.SummonType, data.Times, len(result.Cards))
+	utils.Log().Infof("UserUid: %s, SummonCard success, pool: %s, times: %d, cards: %d", uid, data.PoolId, data.Times, len(result.Cards))
 	return result, nil
 }

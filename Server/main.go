@@ -21,5 +21,9 @@ func main() {
 		mm.GetAccountHandler(),
 		component.WithName("AccountHandler"),
 	)
+	app.Register(
+		mm.GetPlayerHandler(),
+		component.WithName("PlayerHandler"),
+	)
 	app.Start()
 }

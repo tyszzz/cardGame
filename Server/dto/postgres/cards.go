@@ -14,6 +14,7 @@ type Card struct {
 	BaseConfig  cards.BaseConfig  `gorm:"column:base_config;type:jsonb;serializer:json"`
 	SkillConfig cards.SkillConfig `gorm:"column:skill_config;type:jsonb;serializer:json"`
 	IsEnabled   bool              `gorm:"column:is_enabled;not null;default:true"`
+	IsLimited   bool              `gorm:"column:is_limited;not null;default:false"`
 	CreatedAt   time.Time         `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt   time.Time         `gorm:"column:updated_at;autoUpdateTime"`
 }

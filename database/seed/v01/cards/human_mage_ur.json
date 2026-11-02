@@ -1,0 +1,136 @@
+{
+  "cardId": "human_mage_ur",
+  "cardName": "人族UR法師",
+  "rarity": "UR",
+  "race": "Human",
+  "baseConfig": {
+    "attack": 1500,
+    "attackRatio": 1.2,
+    "defense": 300,
+    "defenseRatio": 1,
+    "health": 24000,
+    "healthRatio": 0.8
+  },
+  "skillConfig": {
+    "normalAtk": {
+      "name": "元素彈",
+      "desc": "對敵方隨機3人造成攻擊力90%的魔法傷害",
+      "target": "Random3",
+      "effects": [
+        {
+          "type": "Damage",
+          "side": "Enemy",
+          "damageType": "Magic",
+          "scaleStat": "Attack",
+          "value": 90
+        }
+      ]
+    },
+    "activeSkill": {
+      "name": "元素超載",
+      "desc": "對敵方全體造成攻擊力300%的魔法傷害",
+      "target": "All",
+      "effects": [
+        {
+          "type": "Damage",
+          "side": "Enemy",
+          "damageType": "Magic",
+          "scaleStat": "Attack",
+          "value": 300
+        }
+      ]
+    },
+    "passiveSkill": {
+      "name": "戰鬥激勵",
+      "desc": "戰鬥開始時，攻擊力增加50%",
+      "trigger": "BattleStart",
+      "effects": [
+        {
+          "type": "Buff",
+          "side": "Self",
+          "name": "士氣",
+          "stat": "Attack",
+          "value": 50,
+          "permanent": true,
+          "nonRemovable": true
+        }
+      ]
+    },
+    "talentSkill": [
+      {
+        "name": "護體",
+        "desc": "戰鬥開始時，防禦力增加20%",
+        "trigger": "BattleStart",
+        "unlock": {
+          "star": 1
+        },
+        "effects": [
+          {
+            "type": "Buff",
+            "side": "Self",
+            "name": "護體",
+            "stat": "Defense",
+            "value": 20,
+            "permanent": true,
+            "nonRemovable": true
+          }
+        ]
+      },
+      {
+        "name": "回春",
+        "desc": "每回合結束時，恢復生命上限5%的生命",
+        "trigger": "RoundEnd",
+        "unlock": {
+          "star": 3
+        },
+        "effects": [
+          {
+            "type": "Heal",
+            "side": "Self",
+            "scaleStat": "Health",
+            "value": 5
+          }
+        ]
+      },
+      {
+        "name": "凝神",
+        "desc": "戰鬥開始時，攻擊力增加15%",
+        "trigger": "BattleStart",
+        "unlock": {
+          "star": 5
+        },
+        "effects": [
+          {
+            "type": "Buff",
+            "side": "Self",
+            "name": "凝神",
+            "stat": "Attack",
+            "value": 15,
+            "permanent": true,
+            "nonRemovable": true
+          }
+        ]
+      },
+      {
+        "name": "極意",
+        "desc": "戰鬥開始時，生命上限增加20%",
+        "trigger": "BattleStart",
+        "unlock": {
+          "star": 7
+        },
+        "effects": [
+          {
+            "type": "Buff",
+            "side": "Self",
+            "name": "極意",
+            "stat": "Health",
+            "value": 20,
+            "permanent": true,
+            "nonRemovable": true
+          }
+        ]
+      }
+    ]
+  },
+  "isEnabled": true
+}

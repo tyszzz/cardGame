@@ -1,7 +1,9 @@
 import json
 import re
 import threading
+import time
 import tkinter as tk
+from tkinter import font as tkfont
 from tkinter import messagebox, ttk
 
 from pitaya_client import PitayaClient
@@ -12,12 +14,28 @@ RESULT_ACCOUNT_ALREADY_EXISTS = 3
 RESULT_NICKNAME_ALREADY_EXISTS = 4
 SUMMON_RESULT_MESSAGES = {
 	5: "Not logged in",
-	6: "Invalid summon type or times",
+	6: "Invalid summon times",
 	7: "Not enough currency",
 	8: "Summon failed on server",
+	9: "Summon pool unavailable",
 }
-SUMMON_TYPES = ("Normal", "Friend", "Diamond")
-SUMMON_TIMES = ("1", "10")
+CURRENCY_LABELS = (("coin", "Coin"), ("diamond", "Diamond"), ("friendPoint", "Friend point"))
+# 卡池按鈕；卡池 ID 需與資料庫 summon_pools 一致
+SUMMON_POOLS = (("normal", "Normal (coin)"), ("friend", "Friend (friend point)"), ("diamond", "Diamond"),
+	("up_mo", "Mo UR UP (40 pity)"), ("limited_xian", "Xian limited (40 pity)"))
+SUMMON_TIMES = (1, 10)
+# 依序挑選第一個存在的中文字型；系統需安裝 CJK 字型（Alpine: apk add font-noto-cjk）
+CJK_FONT_CANDIDATES = (
+	"Noto Sans CJK TC",
+	"Noto Sans CJK JP",
+	"Noto Sans CJK SC",
+	"Noto Sans TC",
+	"Microsoft JhengHei",
+	"PingFang TC",
+	"WenQuanYi Zen Hei",
+)
+# server 的 rate limiter 會丟棄過快的請求，連續請求之間保留間隔
+REQUEST_INTERVAL = 0.5
 NICKNAME_PATTERN = re.compile(r"^[A-Za-z0-9\u4e00-\u9fff]{2,12}$")
 ACCOUNT_ID_PATTERN = re.compile(r"^[A-Za-z0-9]+$")
 PASSWORD_PATTERN = re.compile(r"^[A-Za-z0-9@#$%^&*()_+=!?.\-,]{8,16}$")
@@ -41,8 +59,8 @@ class GameClientWindow:
 		self.uid = None
 		self.status = tk.StringVar(value="Disconnected")
 		self.game_status = tk.StringVar(value="Ready")
-		self.summon_type = tk.StringVar(value=SUMMON_TYPES[0])
-		self.summon_times = tk.StringVar(value=SUMMON_TIMES[0])
+		self.summon_buttons = []
+		self.currency_text = tk.StringVar(value="Coin: -    Diamond: -    Friend point: -")
 		self.login_frame = None
 		self.register_frame = None
 		self.game_frame = None
@@ -295,6 +313,7 @@ class GameClientWindow:
 	def _show_game_frame(self):
 		self.login_frame.grid_remove()
 		self.root.title("Card Game - Main")
+		self._refresh_currencies_async()
 
 		self.game_frame = ttk.Frame(self.root, padding=16)
 		self.game_frame.grid(row=0, column=0)
@@ -304,37 +323,34 @@ class GameClientWindow:
 			text=f"Logged in as: {self.account_id.get().strip()}",
 		).grid(row=0, column=0, columnspan=2, pady=(0, 12))
 
-		summon_options = ttk.Frame(self.game_frame)
-		summon_options.grid(row=1, column=0, padx=(0, 8), pady=6)
-		ttk.Combobox(
-			summon_options,
-			textvariable=self.summon_type,
-			values=SUMMON_TYPES,
-			state="readonly",
-			width=8,
-		).grid(row=0, column=0, padx=(0, 4))
-		ttk.Combobox(
-			summon_options,
-			textvariable=self.summon_times,
-			values=SUMMON_TIMES,
-			state="readonly",
-			width=4,
-		).grid(row=0, column=1, padx=(0, 4))
-		self.summon_button = ttk.Button(
-			summon_options,
-			text="Summon",
-			command=self.summon,
+		ttk.Label(self.game_frame, textvariable=self.currency_text).grid(
+			row=1,
+			column=0,
+			columnspan=2,
+			pady=(0, 6),
 		)
-		self.summon_button.grid(row=0, column=2)
+
+		summon_options = ttk.Frame(self.game_frame)
+		summon_options.grid(row=2, column=0, padx=(0, 8), pady=6)
+		for row, (pool_id, label) in enumerate(SUMMON_POOLS):
+			ttk.Label(summon_options, text=label, width=22).grid(row=row, column=0, sticky="w")
+			for col, times in enumerate(SUMMON_TIMES, start=1):
+				button = ttk.Button(
+					summon_options,
+					text="Summon x1" if times == 1 else f"Summon x{times}",
+					command=lambda p=pool_id, t=times: self.summon(p, t),
+				)
+				button.grid(row=row, column=col, padx=2, pady=2)
+				self.summon_buttons.append(button)
 
 		ttk.Button(
 			self.game_frame,
 			text="Logout",
 			command=self.logout,
-		).grid(row=1, column=1, padx=(8, 0), pady=6)
+		).grid(row=2, column=1, padx=(8, 0), pady=6)
 
 		ttk.Label(self.game_frame, textvariable=self.game_status).grid(
-			row=2,
+			row=3,
 			column=0,
 			columnspan=2,
 			pady=6,
@@ -343,51 +359,85 @@ class GameClientWindow:
 		self.result_text = tk.Text(
 			self.game_frame,
 			width=52,
-			height=12,
+			height=22,
 			state="disabled",
 			wrap="word",
 		)
-		self.result_text.grid(row=3, column=0, columnspan=2, pady=(8, 0))
+		self.result_text.grid(row=4, column=0, columnspan=2, pady=(8, 0))
 
-	def summon(self):
+	def _refresh_currencies_async(self):
+		threading.Thread(target=self._fetch_currencies, daemon=True).start()
+
+	def _fetch_currencies(self):
+		time.sleep(REQUEST_INTERVAL)
+		try:
+			result = self.client.get_currencies()
+		except Exception as error:
+			self.root.after(0, self.currency_text.set, f"Currency query failed: {error}")
+			return
+		self.root.after(0, self._show_currencies, result)
+
+	def _show_currencies(self, result: object):
+		if not isinstance(result, dict) or result.get("resultCode", 0) != 0:
+			self.currency_text.set("Currency query failed")
+			return
+		self.currency_text.set(
+			"    ".join(f"{label}: {result.get(key, 0):,}" for key, label in CURRENCY_LABELS)
+		)
+
+	def _set_summon_buttons(self, state: str):
+		for button in self.summon_buttons:
+			button.configure(state=state)
+
+	def summon(self, pool_id: str, times: int):
 		if self.action_in_progress:
 			return
 
 		self.action_in_progress = True
-		self.summon_button.configure(state="disabled")
+		self._set_summon_buttons("disabled")
 		self.game_status.set("Summoning...")
 		threading.Thread(
 			target=self._summon_in_background,
-			args=(int(self.summon_times.get()), self.summon_type.get()),
+			args=(pool_id, times),
 			daemon=True,
 		).start()
 
-	def _summon_in_background(self, times: int, summon_type: str):
+	def _summon_in_background(self, pool_id: str, times: int):
 		try:
-			result = self.client.summon(times, summon_type)
-			self.root.after(0, self._handle_summon_result, result)
+			result = self.client.summon(pool_id, times)
+			self.root.after(0, self._handle_summon_result, pool_id, times, result)
+			self._fetch_currencies()
 		except Exception as error:
 			self.root.after(0, self._show_summon_error, error)
 
-	def _handle_summon_result(self, result: object):
+	def _handle_summon_result(self, pool_id: str, times: int, result: object):
 		self.action_in_progress = False
-		self.summon_button.configure(state="normal")
+		self._set_summon_buttons("normal")
 		self.game_status.set("Ready")
 		code = result.get("resultCode", 0) if isinstance(result, dict) else 0
 		if code != 0:
 			message = SUMMON_RESULT_MESSAGES.get(code, f"resultCode {code}")
 			self._append_result("Summon failed", message)
 			return
+		self._append_result("Summon", f"== {pool_id} x{times} ==")
 		for card in result.get("cards", []):
 			if card.get("isNew"):
 				detail = "NEW"
 			else:
 				detail = f"duplicate -> {card.get('shardId')} x{card.get('shardAmount')}"
-			self._append_result("Summon", f"[{card.get('rarity')}] {card.get('cardName')} ({detail})")
+			up = " UP" if card.get("isUp") else ""
+			self._append_result("Summon", f"[{card.get('rarity')}] {card.get('cardName')}{up} ({detail})")
+		pity = result.get("pity")
+		if pity:
+			guaranteed = ", next high rarity is UP" if pity.get("guaranteedUp") else ""
+			self._append_result(
+				"Pity",
+				f"{pity.get('pullsSinceHigh')}/{pity.get('threshold')}{guaranteed}",
+			)
 
 	def _show_summon_error(self, error: Exception):
 		self.action_in_progress = False
-		self.summon_button.configure(state="normal")
+		self._set_summon_buttons("normal")
 		self.game_status.set("Summon failed")
 		self._append_result("Summon error", str(error))
 
@@ -398,7 +448,7 @@ class GameClientWindow:
 		self.result_text.configure(state="normal")
 		self.result_text.insert(
 			"end",
-			f"{title}: {json.dumps(result, ensure_ascii=False)}\n",
+			f"{title}: {result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)}\n",
 		)
 		self.result_text.see("end")
 		self.result_text.configure(state="disabled")
@@ -422,7 +472,19 @@ class GameClientWindow:
 		self.root.destroy()
 
 
+def _apply_cjk_font(root: tk.Tk):
+	"""把 tk 預設字型換成 CJK 字型；找不到時保持預設並提示。"""
+	available = set(tkfont.families(root))
+	family = next((name for name in CJK_FONT_CANDIDATES if name in available), None)
+	if family is None:
+		print("No CJK font found; Chinese text may not display. Install one (Alpine: apk add font-noto-cjk).")
+		return
+	for name in ("TkDefaultFont", "TkTextFont", "TkFixedFont", "TkMenuFont", "TkHeadingFont"):
+		tkfont.nametofont(name).configure(family=family)
+
+
 if __name__ == "__main__":
 	root = tk.Tk()
+	_apply_cjk_font(root)
 	GameClientWindow(root)
 	root.mainloop()

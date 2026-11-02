@@ -12,4 +12,7 @@ const (
 	SummonInvalidRequest    = 6 // 抽卡類型或次數不合法
 	SummonNotEnoughCurrency = 7
 	SummonFailed            = 8 // 伺服器端錯誤（卡池設定、資料庫等）
+	SummonPoolUnavailable   = 9 // 卡池不存在、未啟用或不在開放時間
 )
+
+const PlayerQueryFailed = 10 // 查詢玩家資料失敗（伺服器端錯誤）
