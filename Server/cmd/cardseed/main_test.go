@@ -413,6 +413,26 @@ func TestSQLEscapesAndMapsEnums(t *testing.T) {
 	}
 }
 
+func TestSQLIsLimited(t *testing.T) {
+	def := validDef()
+	c, err := parseDef(t, def)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := c.sql(); !strings.Contains(got, ", true, false)") || !strings.Contains(got, "is_limited = EXCLUDED.is_limited") {
+		t.Errorf("default card should not be limited:\n%s", got)
+	}
+
+	def.IsLimited = true
+	c, err = parseDef(t, def)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := c.sql(); !strings.Contains(got, ", true, true)") {
+		t.Errorf("limited card should set is_limited:\n%s", got)
+	}
+}
+
 func TestGenerateDuplicateID(t *testing.T) {
 	data, err := json.Marshal(validDef())
 	if err != nil {

@@ -143,8 +143,8 @@ func quote(s string) string {
 
 func (c *parsedCard) sql() string {
 	d := c.def
-	return fmt.Sprintf(`INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled)
-VALUES (%s, %s, %d, %d, %s::jsonb, %s::jsonb, %t)
+	return fmt.Sprintf(`INSERT INTO cards (card_id, card_name, rarity, race, base_config, skill_config, is_enabled, is_limited)
+VALUES (%s, %s, %d, %d, %s::jsonb, %s::jsonb, %t, %t)
 ON CONFLICT (card_id) DO UPDATE SET
     card_name = EXCLUDED.card_name,
     rarity = EXCLUDED.rarity,
@@ -152,7 +152,8 @@ ON CONFLICT (card_id) DO UPDATE SET
     base_config = EXCLUDED.base_config,
     skill_config = EXCLUDED.skill_config,
     is_enabled = EXCLUDED.is_enabled,
+    is_limited = EXCLUDED.is_limited,
     updated_at = CURRENT_TIMESTAMP;
 
-`, quote(d.CardID), quote(d.CardName), d.Rarity, d.Race, quote(c.baseConfig), quote(c.skillConfig), d.IsEnabled)
+`, quote(d.CardID), quote(d.CardName), d.Rarity, d.Race, quote(c.baseConfig), quote(c.skillConfig), d.IsEnabled, d.IsLimited)
 }

@@ -1,7 +1,5 @@
 package packet
 
-import "cardGame/model/constants"
-
 // account packet
 type (
 	CreateNewAccount struct {
@@ -19,7 +17,10 @@ type (
 // summon packet
 type (
 	SummonCard struct {
-		Times      int32                `json:"times"`
-		SummonType constants.SummonType `json:"summonType"`
+		PoolId string `json:"poolId"`
+		Times  int32  `json:"times"`
 	}
 )
+
+// GetCurrencies 不需要參數，玩家以 session 為準
+type GetCurrencies struct{}

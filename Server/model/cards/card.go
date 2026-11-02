@@ -11,4 +11,5 @@ type CardDefinition struct {
 	BaseConfig  BaseConfig       `json:"baseConfig"`
 	SkillConfig SkillConfig      `json:"skillConfig"`
 	IsEnabled   bool             `json:"isEnabled"`
+	IsLimited   bool             `json:"isLimited,omitempty"` // 限定卡不進入常駐卡池
 }

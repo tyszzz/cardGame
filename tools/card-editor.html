@@ -237,6 +237,10 @@
             <label class="checkbox"><input id="is-enabled" name="isEnabled" type="checkbox" checked> 啟用</label>
           </div>
 
+          <div class="field">
+            <label class="checkbox"><input id="is-limited" name="isLimited" type="checkbox"> 限定卡（不進入常駐卡池）</label>
+          </div>
+
           <div class="actions">
             <button type="submit">預覽 JSON</button>
             <button type="button" class="secondary" id="clear-button">清除</button>
@@ -625,7 +629,8 @@
           healthRatio: getRatioValue("health-ratio", "生命成長率")
         },
         skillConfig: buildSkillConfig(),
-        isEnabled: document.querySelector("#is-enabled").checked
+        isEnabled: document.querySelector("#is-enabled").checked,
+        isLimited: document.querySelector("#is-limited").checked
       };
     }
 

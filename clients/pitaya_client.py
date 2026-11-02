@@ -88,14 +88,17 @@ class PitayaClient:
             },
         )
 
-    def summon(self, times: int, summon_type: str) -> object:
+    def summon(self, pool_id: str, times: int) -> object:
         return self.request(
             "SummonHandler.SummonCard",
             {
+                "poolId": pool_id,
                 "times": times,
-                "summonType": summon_type,
             },
         )
+
+    def get_currencies(self) -> object:
+        return self.request("PlayerHandler.GetCurrencies", {})
 
     def publish(self, route: str, body: object) -> None:
         if not self.ws:
