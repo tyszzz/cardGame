@@ -2,15 +2,13 @@ package packet
 
 import "cardGame/model/constants"
 
-// base packet
 type (
+	// base packet
 	BaseResult struct {
 		ResultCode int32 `json:"resultCode"`
 	}
-)
 
-// account packet
-type (
+	// account packet
 	CreateAccountResult struct {
 		BaseResult
 		AccountId string `json:"accountId"`
@@ -20,10 +18,8 @@ type (
 		BaseResult
 		AccountId string `json:"accountId"`
 	}
-)
 
-// summon packet
-type (
+	// summon packet
 	SummonCardResult struct {
 		BaseResult
 		PoolId string           `json:"poolId"`
@@ -48,10 +44,8 @@ type (
 		Threshold      int32 `json:"threshold"`
 		GuaranteedUp   bool  `json:"guaranteedUp"`
 	}
-)
 
-// player packet
-type (
+	// player packet
 	Currencies struct {
 		Coin        int64 `json:"coin"`
 		Diamond     int64 `json:"diamond"`
@@ -65,10 +59,8 @@ type (
 		VipLevel   int32      `json:"vipLevel"`
 		Currencies Currencies `json:"currencies"`
 	}
-)
 
-// inventory packet
-type (
+	// inventory packet
 	GetBackpackResult struct {
 		BaseResult
 		Capacity int            `json:"capacity"` // 背包道具種類上限

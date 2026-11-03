@@ -17,27 +17,58 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func MappingLogrusLevel(lvl string) logrus.Level {
-
-	// "panic" "fatal" "error" "warn" "info" "debug" "trace"
-	switch lvl {
-	case "debug":
-		return logrus.DebugLevel
-	case "info":
-		return logrus.InfoLevel
-	case "warn":
-		return logrus.WarnLevel
-	case "error":
-		return logrus.ErrorLevel
-	default:
-		return logrus.InfoLevel
+type (
+	// RotateWriter 封裝 rotate writer 的相關設定
+	RotateWriter struct {
+		writer io.Writer
 	}
-}
 
-// RotateWriter 封裝 rotate writer 的相關設定
-type RotateWriter struct {
-	writer io.Writer
-}
+	LogConfig struct {
+		IsToStdout    bool
+		IsToFile      bool
+		IsAsyncWrite  bool
+		LogNamePrefix string
+		LogPath       string
+		LogLevelSet   logrus.Level
+		RotateMaxAge  time.Duration
+		RotateTime    time.Duration
+		RotateSize    int64
+		FieldMap      map[string]string
+	}
+
+	logEntry struct {
+		level  logrus.Level
+		data   []byte
+		writer io.Writer
+	}
+
+	// LevelHook 自訂的 Hook，用於根據日誌級別將日誌寫入不同的檔案
+	LevelHook struct {
+		Writers    map[logrus.Level]io.Writer
+		LevelSlice []logrus.Level
+		Formatter  logrus.Formatter
+		AsyncWrite bool
+		logChan    chan logEntry
+		wg         sync.WaitGroup
+	}
+
+	// GameFormatter provides custom level strings
+	GameFormatter struct {
+		TimestampFormat string
+		FieldMap        map[string]string
+	}
+
+	ConsoleFormatter struct {
+		TimestampFormat     string
+		IncludePitayaFields bool
+	}
+
+	// PitayaFormatter provides custom level strings
+	PitayaFormatter struct {
+		TimestampFormat string
+		FieldMap        map[string]string
+	}
+)
 
 // NewRotateWriter 創建新的 RotateWriter
 func NewRotateWriter(logPath, prefix string, maxAge, rotateTime time.Duration, rotateSize int64) (*RotateWriter, error) {
@@ -64,6 +95,96 @@ func NewRotateWriter(logPath, prefix string, maxAge, rotateTime time.Duration, r
 	return &RotateWriter{
 		writer: writer,
 	}, nil
+}
+
+// NewLevelHook 建立新的 LevelHook
+func NewLevelHook(formatter logrus.Formatter, levels []logrus.Level, asyncWrite bool) *LevelHook {
+	hook := &LevelHook{
+		Writers:    make(map[logrus.Level]io.Writer),
+		LevelSlice: levels,
+		Formatter:  formatter,
+		AsyncWrite: asyncWrite,
+		logChan:    make(chan logEntry, 1000), // 使用帶緩衝的 channel
+	}
+
+	if asyncWrite {
+		hook.startWorker()
+	}
+
+	return hook
+}
+
+// inner function
+
+func formatCaller(entry *logrus.Entry) string {
+	if entry.Caller == nil {
+		return ""
+	}
+
+	function := runtime.FuncForPC(entry.Caller.PC)
+	if function == nil {
+		return entry.Caller.Function
+	}
+
+	name := function.Name()
+	packageName := ""
+	if slash := strings.LastIndex(name, "/"); slash >= 0 {
+		packagePath := name[:slash]
+		name = name[slash+1:]
+		if packageSlash := strings.LastIndex(packagePath, "/"); packageSlash >= 0 {
+			packageName = packagePath[packageSlash+1:]
+		} else {
+			packageName = packagePath
+		}
+	}
+	name = strings.TrimPrefix(name, "(*")
+	name = strings.Replace(name, ").", ".", 1)
+	if packageName == "" {
+		return name
+	}
+	return packageName + "." + name
+}
+
+// startWorker 啟動一個 worker goroutine 來處理異步寫入
+func (hook *LevelHook) startWorker() {
+	hook.wg.Add(1)
+	go func() {
+		defer hook.wg.Done()
+		for entry := range hook.logChan {
+			_, err := entry.writer.Write(entry.data)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error writing log: %v\n", err)
+			}
+		}
+	}()
+}
+
+// 確保目錄存在的輔助函式
+func ensureDir(dirName string) error {
+	err := os.MkdirAll(dirName, 0755)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// outer function
+
+func MappingLogrusLevel(lvl string) logrus.Level {
+
+	// "panic" "fatal" "error" "warn" "info" "debug" "trace"
+	switch lvl {
+	case "debug":
+		return logrus.DebugLevel
+	case "info":
+		return logrus.InfoLevel
+	case "warn":
+		return logrus.WarnLevel
+	case "error":
+		return logrus.ErrorLevel
+	default:
+		return logrus.InfoLevel
+	}
 }
 
 // SetupLogrusRotate 設置 Logrus 與單一目錄的日誌輪轉
@@ -131,46 +252,6 @@ func SetupLogrusRotate(setting LogConfig, isPitaya bool, sharedWriter *RotateWri
 
 	logIns.AddHook(levelHook)
 	return logIns, levelHook, nil
-}
-
-type LogConfig struct {
-	IsToStdout    bool
-	IsToFile      bool
-	IsAsyncWrite  bool
-	LogNamePrefix string
-	LogPath       string
-	LogLevelSet   logrus.Level
-	RotateMaxAge  time.Duration
-	RotateTime    time.Duration
-	RotateSize    int64
-	FieldMap      map[string]string
-}
-
-type logEntry struct {
-	level  logrus.Level
-	data   []byte
-	writer io.Writer
-}
-
-// LevelHook 自訂的 Hook，用於根據日誌級別將日誌寫入不同的檔案
-type LevelHook struct {
-	Writers    map[logrus.Level]io.Writer
-	LevelSlice []logrus.Level
-	Formatter  logrus.Formatter
-	AsyncWrite bool
-	logChan    chan logEntry
-	wg         sync.WaitGroup
-}
-
-// GameFormatter provides custom level strings
-type GameFormatter struct {
-	TimestampFormat string
-	FieldMap        map[string]string
-}
-
-type ConsoleFormatter struct {
-	TimestampFormat     string
-	IncludePitayaFields bool
 }
 
 func (f *ConsoleFormatter) Format(entry *logrus.Entry) ([]byte, error) {
@@ -244,12 +325,6 @@ func (f *GameFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	return append(serialized, '\n'), nil
 }
 
-// PitayaFormatter provides custom level strings
-type PitayaFormatter struct {
-	TimestampFormat string
-	FieldMap        map[string]string
-}
-
 // Format implements the logrus.Formatter interface
 func (f *PitayaFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	// 定義自定義的日誌等級對應
@@ -298,66 +373,6 @@ func (f *PitayaFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	}
 
 	return append(serialized, '\n'), nil
-}
-
-func formatCaller(entry *logrus.Entry) string {
-	if entry.Caller == nil {
-		return ""
-	}
-
-	function := runtime.FuncForPC(entry.Caller.PC)
-	if function == nil {
-		return entry.Caller.Function
-	}
-
-	name := function.Name()
-	packageName := ""
-	if slash := strings.LastIndex(name, "/"); slash >= 0 {
-		packagePath := name[:slash]
-		name = name[slash+1:]
-		if packageSlash := strings.LastIndex(packagePath, "/"); packageSlash >= 0 {
-			packageName = packagePath[packageSlash+1:]
-		} else {
-			packageName = packagePath
-		}
-	}
-	name = strings.TrimPrefix(name, "(*")
-	name = strings.Replace(name, ").", ".", 1)
-	if packageName == "" {
-		return name
-	}
-	return packageName + "." + name
-}
-
-// NewLevelHook 建立新的 LevelHook
-func NewLevelHook(formatter logrus.Formatter, levels []logrus.Level, asyncWrite bool) *LevelHook {
-	hook := &LevelHook{
-		Writers:    make(map[logrus.Level]io.Writer),
-		LevelSlice: levels,
-		Formatter:  formatter,
-		AsyncWrite: asyncWrite,
-		logChan:    make(chan logEntry, 1000), // 使用帶緩衝的 channel
-	}
-
-	if asyncWrite {
-		hook.startWorker()
-	}
-
-	return hook
-}
-
-// startWorker 啟動一個 worker goroutine 來處理異步寫入
-func (hook *LevelHook) startWorker() {
-	hook.wg.Add(1)
-	go func() {
-		defer hook.wg.Done()
-		for entry := range hook.logChan {
-			_, err := entry.writer.Write(entry.data)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error writing log: %v\n", err)
-			}
-		}
-	}()
 }
 
 // Fire 實現 Fire 方法，當有日誌輸出時會被呼叫
@@ -409,13 +424,4 @@ func (hook *LevelHook) Wait() {
 		close(hook.logChan)
 		hook.wg.Wait()
 	}
-}
-
-// 確保目錄存在的輔助函式
-func ensureDir(dirName string) error {
-	err := os.MkdirAll(dirName, 0755)
-	if err != nil {
-		return err
-	}
-	return nil
 }

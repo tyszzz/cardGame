@@ -7,6 +7,8 @@ import (
 	"github.com/topfreegames/pitaya/v2/component"
 )
 
+// outer function
+
 func main() {
 	app := utils.App()
 	defer app.Shutdown()

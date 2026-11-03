@@ -145,6 +145,25 @@ PGPASSWORD=... psql -h 127.0.0.1 -p 5433 -U tyszzz -d tyszzz -f migration/000001
 
 原本的 `database/postgrator` 是 glibc binary，在 Alpine musl 執行時出現 relocation errors，因此不建議繼續使用。Docker migration 也受限於目前環境沒有 Docker daemon。
 
+## Go 檔案宣告順序
+
+後端非測試的 `.go` 檔案一律依下列順序排列，由上到下：
+
+1. `type`：同一頁有多個 type 時合併為一個 `type ( ... )`，只有一個時維持單獨的 `type`。
+2. `const`：保持原本的區塊，不合併，避免破壞 `iota`。
+3. `var`：多個合併為一個 `var ( ... )`。
+4. 建構函式：`New*`、`Init*`。
+5. `// inner function`：小寫開頭的函式與方法，僅供該 package 使用。
+6. `// outer function`：大寫開頭的函式與方法，供外部使用；`main`、`init` 也放在這一區。
+
+細節：
+
+- 某一區沒有內容就省略該區與標記；標記註解 `// inner function`、`// outer function` 放在該區第一個函式上方，並空一行隔開，避免被當成該函式的 doc 註解。
+- 各區內維持原本的相對順序，註解與所屬宣告一起移動。
+- 範例：`services/account_service.go`。
+- 測試檔不適用。
+- 這個規定只管順序，不改變邏輯；新增程式碼時直接放在對應區塊，不要因此另外重構。
+
 ## 卡片、抽卡與怒氣規則
 
 - 卡片定義以 JSON 維護於 `database/seed/<version>/cards/*.json`（可用 `tools/card-editor.html` 產生），再以 `go run ./cmd/cardseed <version>`（在 `Server/` 下）轉成 `cards.sql`，由 `database/seed.sh` 匯入。`cardseed` 會驗證欄位、稀有度與技能規則。

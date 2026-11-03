@@ -11,19 +11,29 @@ import (
 	"github.com/topfreegames/pitaya/v2/component"
 )
 
-type CardService interface {
-	GetCards(ctx context.Context, uid string) (*packet.GetCardsResult, error)
-	UpgradeCard(ctx context.Context, uid string, data *packet.UpgradeCard) (*packet.UpgradeCardResult, error)
-}
+type (
+	CardService interface {
+		GetCards(ctx context.Context, uid string) (*packet.GetCardsResult, error)
+		UpgradeCard(ctx context.Context, uid string, data *packet.UpgradeCard) (*packet.UpgradeCardResult, error)
+	}
 
-type CardHandler struct {
-	component.Base
-	cs CardService
-}
+	CardHandler struct {
+		component.Base
+		cs CardService
+	}
+)
 
 func NewCardHandler(cs CardService) *CardHandler {
 	return &CardHandler{cs: cs}
 }
+
+// inner function
+
+func upgradeFailed(resultCode int32) *packet.UpgradeCardResult {
+	return &packet.UpgradeCardResult{BaseResult: packet.BaseResult{ResultCode: resultCode}}
+}
+
+// outer function
 
 // GetCards 回傳目前登入玩家持有的卡片，uid 以登入後綁定的 session 為準。
 func (h *CardHandler) GetCards(ctx context.Context, _ *packet.Empty) (*packet.GetCardsResult, error) {
@@ -38,10 +48,6 @@ func (h *CardHandler) GetCards(ctx context.Context, _ *packet.Empty) (*packet.Ge
 		return &packet.GetCardsResult{BaseResult: packet.BaseResult{ResultCode: constants.PlayerQueryFailed}, Cards: []packet.OwnedCard{}}, nil
 	}
 	return result, nil
-}
-
-func upgradeFailed(resultCode int32) *packet.UpgradeCardResult {
-	return &packet.UpgradeCardResult{BaseResult: packet.BaseResult{ResultCode: resultCode}}
 }
 
 // UpgradeCard 消耗經驗道具將卡片升一級，uid 以登入後綁定的 session 為準。

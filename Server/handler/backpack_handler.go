@@ -9,18 +9,22 @@ import (
 	"github.com/topfreegames/pitaya/v2/component"
 )
 
-type BackpackService interface {
-	GetBackpack(ctx context.Context, uid string) (*packet.GetBackpackResult, error)
-}
+type (
+	BackpackService interface {
+		GetBackpack(ctx context.Context, uid string) (*packet.GetBackpackResult, error)
+	}
 
-type BackpackHandler struct {
-	component.Base
-	bs BackpackService
-}
+	BackpackHandler struct {
+		component.Base
+		bs BackpackService
+	}
+)
 
 func NewBackpackHandler(bs BackpackService) *BackpackHandler {
 	return &BackpackHandler{bs: bs}
 }
+
+// outer function
 
 // GetBackpack 回傳目前登入玩家的背包道具，uid 以登入後綁定的 session 為準。
 func (h *BackpackHandler) GetBackpack(ctx context.Context, _ *packet.Empty) (*packet.GetBackpackResult, error) {

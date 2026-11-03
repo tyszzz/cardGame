@@ -20,6 +20,8 @@ func InitInventoryRepo(db *gorm.DB) *InventoryRepo {
 	return &InventoryRepo{db: db}
 }
 
+// outer function
+
 func (r *InventoryRepo) ListItems(ctx context.Context, uid string) ([]inventory.BackpackItem, error) {
 	var rows []struct {
 		ItemId   string

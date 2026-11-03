@@ -11,10 +11,11 @@ import (
 	"github.com/topfreegames/pitaya/v2/component"
 )
 
-type SummonService interface {
-	SummonCard(ctx context.Context, uid string, data *packet.SummonCard) (*packet.SummonCardResult, error)
-}
 type (
+	SummonService interface {
+		SummonCard(ctx context.Context, uid string, data *packet.SummonCard) (*packet.SummonCardResult, error)
+	}
+
 	SummonHandler struct {
 		component.Base
 		ss SummonService
@@ -27,12 +28,16 @@ func NewSummonHandler(ss SummonService) *SummonHandler {
 	}
 }
 
+// inner function
+
 func summonFailed(resultCode int32) *packet.SummonCardResult {
 	return &packet.SummonCardResult{
 		BaseResult: packet.BaseResult{ResultCode: resultCode},
 		Cards:      []packet.SummonCardItem{},
 	}
 }
+
+// outer function
 
 func (h *SummonHandler) SummonCard(
 	ctx context.Context,

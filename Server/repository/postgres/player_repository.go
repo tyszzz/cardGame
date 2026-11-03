@@ -18,6 +18,8 @@ func InitPlayerRepo(db *gorm.DB) *PlayerRepo {
 	return &PlayerRepo{db: db}
 }
 
+// outer function
+
 func (r *PlayerRepo) GetPlayer(ctx context.Context, uid string) (*player.Player, error) {
 	db := r.db.WithContext(ctx)
 

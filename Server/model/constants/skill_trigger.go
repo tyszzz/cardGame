@@ -15,21 +15,25 @@ const (
 	TriggerBattleStart      Trigger = 5 // 戰鬥開始時
 )
 
-var triggerValueToName = map[Trigger]string{
-	TriggerBeforeRoundStart: "BeforeRoundStart",
-	TriggerRoundEnd:         "RoundEnd",
-	TriggerBeforeAction:     "BeforeAction",
-	TriggerAfterAction:      "AfterAction",
-	TriggerBattleStart:      "BattleStart",
-}
+var (
+	triggerValueToName = map[Trigger]string{
+		TriggerBeforeRoundStart: "BeforeRoundStart",
+		TriggerRoundEnd:         "RoundEnd",
+		TriggerBeforeAction:     "BeforeAction",
+		TriggerAfterAction:      "AfterAction",
+		TriggerBattleStart:      "BattleStart",
+	}
 
-var triggerNameToValue = map[string]Trigger{
-	"BeforeRoundStart": TriggerBeforeRoundStart,
-	"RoundEnd":         TriggerRoundEnd,
-	"BeforeAction":     TriggerBeforeAction,
-	"AfterAction":      TriggerAfterAction,
-	"BattleStart":      TriggerBattleStart,
-}
+	triggerNameToValue = map[string]Trigger{
+		"BeforeRoundStart": TriggerBeforeRoundStart,
+		"RoundEnd":         TriggerRoundEnd,
+		"BeforeAction":     TriggerBeforeAction,
+		"AfterAction":      TriggerAfterAction,
+		"BattleStart":      TriggerBattleStart,
+	}
+)
+
+// outer function
 
 func (v Trigger) String() string {
 	if name, ok := triggerValueToName[v]; ok {

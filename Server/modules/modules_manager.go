@@ -7,19 +7,21 @@ import (
 	"cardGame/services"
 )
 
-type ModulesManager struct {
-	accountHandler  *handler.AccountHandler
-	summonHandler   *handler.SummonHandler
-	playerHandler   *handler.PlayerHandler
-	backpackHandler *handler.BackpackHandler
-	cardHandler     *handler.CardHandler
-}
+type (
+	ModulesManager struct {
+		accountHandler  *handler.AccountHandler
+		summonHandler   *handler.SummonHandler
+		playerHandler   *handler.PlayerHandler
+		backpackHandler *handler.BackpackHandler
+		cardHandler     *handler.CardHandler
+	}
 
-type ModulesFunc interface {
-	StartLoop()
-	Stop()
-	FirePacket(data interface{})
-}
+	ModulesFunc interface {
+		StartLoop()
+		Stop()
+		FirePacket(data interface{})
+	}
+)
 
 func NewModulesManager() *ModulesManager {
 	mm := &ModulesManager{}
@@ -45,6 +47,8 @@ func NewModulesManager() *ModulesManager {
 	mm.cardHandler = handler.NewCardHandler(inventoryService)
 	return mm
 }
+
+// outer function
 
 func (mm *ModulesManager) GetSummonHandler() *handler.SummonHandler {
 	return mm.summonHandler

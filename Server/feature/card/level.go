@@ -5,6 +5,8 @@ import (
 	"math"
 )
 
+// outer function
+
 // ExpToNext 回傳目前等級升到下一級所需的經驗；已達上限或等級不合法時回傳 0。
 // 1 級升 2 級需要 CardExpBase，之後每級為上一級需求乘 1.2 後向上取整（以整數運算避免浮點誤差）。
 func ExpToNext(level int) int64 {

@@ -14,27 +14,18 @@ import (
 	"cardGame/model/cards"
 )
 
+type parsedCard struct {
+	def         cards.CardDefinition
+	baseConfig  string
+	skillConfig string
+}
+
 const (
 	maxCardIDLen   = 64
 	maxCardNameLen = 100
 )
 
-func main() {
-	seedDir := flag.String("seed-dir", "../database/seed", "seed 根目錄")
-	flag.Parse()
-	if flag.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "Usage: cardseed [-seed-dir dir] <seed-version>")
-		os.Exit(1)
-	}
-
-	versionDir := filepath.Join(*seedDir, flag.Arg(0))
-	out := filepath.Join(versionDir, "cards.sql")
-	if err := generate(filepath.Join(versionDir, "cards"), out); err != nil {
-		fmt.Fprintln(os.Stderr, "cardseed:", err)
-		os.Exit(1)
-	}
-	fmt.Println("generated", out)
-}
+// inner function
 
 func generate(jsonDir, outFile string) error {
 	files, err := filepath.Glob(filepath.Join(jsonDir, "*.json"))
@@ -65,12 +56,6 @@ func generate(jsonDir, outFile string) error {
 		sb.WriteString(card.sql())
 	}
 	return os.WriteFile(outFile, []byte(sb.String()), 0o644)
-}
-
-type parsedCard struct {
-	def         cards.CardDefinition
-	baseConfig  string
-	skillConfig string
 }
 
 func parseCard(data []byte) (*parsedCard, error) {
@@ -156,4 +141,23 @@ ON CONFLICT (card_id) DO UPDATE SET
     updated_at = CURRENT_TIMESTAMP;
 
 `, quote(d.CardID), quote(d.CardName), d.Rarity, d.Race, quote(c.baseConfig), quote(c.skillConfig), d.IsEnabled, d.IsLimited)
+}
+
+// outer function
+
+func main() {
+	seedDir := flag.String("seed-dir", "../database/seed", "seed 根目錄")
+	flag.Parse()
+	if flag.NArg() != 1 {
+		fmt.Fprintln(os.Stderr, "Usage: cardseed [-seed-dir dir] <seed-version>")
+		os.Exit(1)
+	}
+
+	versionDir := filepath.Join(*seedDir, flag.Arg(0))
+	out := filepath.Join(versionDir, "cards.sql")
+	if err := generate(filepath.Join(versionDir, "cards"), out); err != nil {
+		fmt.Fprintln(os.Stderr, "cardseed:", err)
+		os.Exit(1)
+	}
+	fmt.Println("generated", out)
 }

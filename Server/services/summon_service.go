@@ -9,11 +9,6 @@ import (
 	"time"
 )
 
-const (
-	poolCacheTTL        = 5 * time.Minute  // 卡池資料定時重新載入的間隔
-	poolReloadRetryWait = 30 * time.Second // 重新載入失敗並沿用舊資料時，下次重試的等待時間
-)
-
 type (
 	SummonService struct {
 		repo summon.SummonRepository
@@ -27,6 +22,11 @@ type (
 	}
 )
 
+const (
+	poolCacheTTL        = 5 * time.Minute  // 卡池資料定時重新載入的間隔
+	poolReloadRetryWait = 30 * time.Second // 重新載入失敗並沿用舊資料時，下次重試的等待時間
+)
+
 func NewSummonService(repo summon.SummonRepository) *SummonService {
 	return &SummonService{
 		repo: repo,
@@ -35,6 +35,8 @@ func NewSummonService(repo summon.SummonRepository) *SummonService {
 		warn: func(format string, args ...any) { utils.Log().Warnf(format, args...) },
 	}
 }
+
+// inner function
 
 // loadPools 載入所有卡池並組裝；定義不合法的卡池會被略過並記錄警告，不影響其他卡池。
 func (s *SummonService) loadPools(ctx context.Context) (map[string]*summon.Pool, error) {
@@ -91,6 +93,8 @@ func (s *SummonService) getPool(ctx context.Context, poolId string) (*summon.Poo
 	}
 	return pool, nil
 }
+
+// outer function
 
 // SummonCard 驗證請求後，在單一 transaction 內扣款、抽卡並寫入結果。
 // 卡池、費用與貨幣一律以伺服器端的卡池定義為準。

@@ -19,19 +19,20 @@ type AccountService struct {
 	AccountRepo account.AccountRepository
 }
 
-func NewAccountService(accountRepo account.AccountRepository) *AccountService {
-	return &AccountService{
-		AccountRepo: accountRepo,
-	}
-}
-
 var (
 	accountIDPattern = regexp.MustCompile(`^[A-Za-z0-9]+$`)
 	nicknamePattern  = regexp.MustCompile(`^[A-Za-z0-9\p{Han}]+$`)
 	passwordPattern  = regexp.MustCompile(`^[A-Za-z0-9@#$%^&*()_+=!?.\-,]+$`)
 )
 
+func NewAccountService(accountRepo account.AccountRepository) *AccountService {
+	return &AccountService{
+		AccountRepo: accountRepo,
+	}
+}
+
 // inner function
+
 func validateAccountID(accountId string) error {
 	if len(accountId) < 3 || len(accountId) > 20 {
 		return account.ErrAccountIDLength
@@ -77,6 +78,7 @@ func validatePassword(password string) error {
 }
 
 // outer function
+
 func (s *AccountService) CreateNewAccount(ctx context.Context, data *packet.CreateNewAccount) (bool, error) {
 	utils.Log().Infof("create new account, accountId: %s", data.AccountId)
 	if err := validateAccountID(data.AccountId); err != nil {

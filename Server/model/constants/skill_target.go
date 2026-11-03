@@ -17,25 +17,29 @@ const (
 	TargetOpposite Target = 7 // 對位（正對面的敵人）
 )
 
-var targetValueToName = map[Target]string{
-	TargetSingle:   "Single",
-	TargetRandom3:  "Random3",
-	TargetAll:      "All",
-	TargetFrontRow: "FrontRow",
-	TargetBackRow:  "BackRow",
-	TargetColumn:   "Column",
-	TargetOpposite: "Opposite",
-}
+var (
+	targetValueToName = map[Target]string{
+		TargetSingle:   "Single",
+		TargetRandom3:  "Random3",
+		TargetAll:      "All",
+		TargetFrontRow: "FrontRow",
+		TargetBackRow:  "BackRow",
+		TargetColumn:   "Column",
+		TargetOpposite: "Opposite",
+	}
 
-var targetNameToValue = map[string]Target{
-	"Single":   TargetSingle,
-	"Random3":  TargetRandom3,
-	"All":      TargetAll,
-	"FrontRow": TargetFrontRow,
-	"BackRow":  TargetBackRow,
-	"Column":   TargetColumn,
-	"Opposite": TargetOpposite,
-}
+	targetNameToValue = map[string]Target{
+		"Single":   TargetSingle,
+		"Random3":  TargetRandom3,
+		"All":      TargetAll,
+		"FrontRow": TargetFrontRow,
+		"BackRow":  TargetBackRow,
+		"Column":   TargetColumn,
+		"Opposite": TargetOpposite,
+	}
+)
+
+// outer function
 
 func (v Target) String() string {
 	if name, ok := targetValueToName[v]; ok {

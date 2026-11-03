@@ -13,17 +13,21 @@ const (
 	StatDefense Stat = 3 // 防禦
 )
 
-var statValueToName = map[Stat]string{
-	StatHealth:  "Health",
-	StatAttack:  "Attack",
-	StatDefense: "Defense",
-}
+var (
+	statValueToName = map[Stat]string{
+		StatHealth:  "Health",
+		StatAttack:  "Attack",
+		StatDefense: "Defense",
+	}
 
-var statNameToValue = map[string]Stat{
-	"Health":  StatHealth,
-	"Attack":  StatAttack,
-	"Defense": StatDefense,
-}
+	statNameToValue = map[string]Stat{
+		"Health":  StatHealth,
+		"Attack":  StatAttack,
+		"Defense": StatDefense,
+	}
+)
+
+// outer function
 
 func (v Stat) String() string {
 	if name, ok := statValueToName[v]; ok {

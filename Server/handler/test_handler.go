@@ -17,6 +17,8 @@ func NewTestHandler() *TestHandler {
 	return &TestHandler{}
 }
 
+// outer function
+
 func (h *TestHandler) SummonCard(ctx context.Context, data *packet.SummonCard) {
 
 }

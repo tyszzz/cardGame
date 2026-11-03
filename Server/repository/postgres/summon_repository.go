@@ -27,6 +27,7 @@ func InitSummonRepo(db *gorm.DB) *SummonRepo {
 }
 
 // inner function
+
 func parseRarity(name string) (constants.Rarity, error) {
 	var r constants.Rarity
 	if err := json.Unmarshal([]byte(strconv.Quote(name)), &r); err != nil {
@@ -104,6 +105,8 @@ func toPoolDefinition(row *postgresDto.SummonPool) (summon.PoolDefinition, error
 	}
 	return def, nil
 }
+
+// outer function
 
 // interface implementation
 func (r *SummonRepo) ListEnabledCards(ctx context.Context) ([]card.Card, error) {

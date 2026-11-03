@@ -6,17 +6,59 @@ import (
 	"cardGame/model/constants"
 )
 
-// Rand 抽象化亂數來源，讓測試可以注入固定結果。
-type Rand interface {
-	IntN(n int) int
-}
+type (
+	// Rand 抽象化亂數來源，讓測試可以注入固定結果。
+	Rand interface {
+		IntN(n int) int
+	}
 
-type globalRand struct{}
-
-func (globalRand) IntN(n int) int { return rand.IntN(n) }
+	globalRand struct{}
+)
 
 // DefaultRand 使用 math/rand/v2 的全域亂數，可併發使用。
 var DefaultRand Rand = globalRand{}
+
+// inner function
+
+func (p *Pool) pickCard(rarity constants.Rarity, state PityState, rnd Rand) PoolCard {
+	ups, normal := p.up[rarity], p.normal[rarity]
+	if len(ups) == 0 {
+		return normal[rnd.IntN(len(normal))]
+	}
+	forced := p.Pity != nil && p.Pity.UpGuarantee && state.GuaranteedUp && rarity >= p.Pity.MinRarity
+	if forced || len(normal) == 0 || rnd.IntN(100) < p.UpRates[rarity] {
+		return ups[rnd.IntN(len(ups))]
+	}
+	return normal[rnd.IntN(len(normal))]
+}
+
+// rollRarity 依權重抽稀有度，只考慮 minRarity 以上的項目（0 代表不限制）。
+func rollRarity(weights []RarityWeight, minRarity constants.Rarity, rnd Rand) (constants.Rarity, error) {
+	total := 0
+	for _, w := range weights {
+		if w.Rarity >= minRarity {
+			total += w.Weight
+		}
+	}
+	if total <= 0 {
+		return 0, ErrInvalidPool
+	}
+	n := rnd.IntN(total)
+	for _, w := range weights {
+		if w.Rarity < minRarity {
+			continue
+		}
+		if n < w.Weight {
+			return w.Rarity, nil
+		}
+		n -= w.Weight
+	}
+	return 0, ErrInvalidPool
+}
+
+// outer function
+
+func (globalRand) IntN(n int) int { return rand.IntN(n) }
 
 // Draw 依卡池規則抽 times 張卡，回傳抽到的卡與抽完後的保底狀態。
 // 每一抽先決定稀有度（累積保底與十連保底會限制最低稀有度），再依 UP 比例選卡。
@@ -59,40 +101,4 @@ func (p *Pool) Draw(times int32, state PityState, rnd Rand) ([]PoolCard, PitySta
 		}
 	}
 	return drawn, state, nil
-}
-
-func (p *Pool) pickCard(rarity constants.Rarity, state PityState, rnd Rand) PoolCard {
-	ups, normal := p.up[rarity], p.normal[rarity]
-	if len(ups) == 0 {
-		return normal[rnd.IntN(len(normal))]
-	}
-	forced := p.Pity != nil && p.Pity.UpGuarantee && state.GuaranteedUp && rarity >= p.Pity.MinRarity
-	if forced || len(normal) == 0 || rnd.IntN(100) < p.UpRates[rarity] {
-		return ups[rnd.IntN(len(ups))]
-	}
-	return normal[rnd.IntN(len(normal))]
-}
-
-// rollRarity 依權重抽稀有度，只考慮 minRarity 以上的項目（0 代表不限制）。
-func rollRarity(weights []RarityWeight, minRarity constants.Rarity, rnd Rand) (constants.Rarity, error) {
-	total := 0
-	for _, w := range weights {
-		if w.Rarity >= minRarity {
-			total += w.Weight
-		}
-	}
-	if total <= 0 {
-		return 0, ErrInvalidPool
-	}
-	n := rnd.IntN(total)
-	for _, w := range weights {
-		if w.Rarity < minRarity {
-			continue
-		}
-		if n < w.Weight {
-			return w.Rarity, nil
-		}
-		n -= w.Weight
-	}
-	return 0, ErrInvalidPool
 }

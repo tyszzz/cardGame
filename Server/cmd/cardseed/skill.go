@@ -9,16 +9,19 @@ import (
 	"cardGame/model/constants"
 )
 
-// talentCountByRarity 為各稀有度固定的天賦技能數量，未列出的稀有度視為 0。
-var talentCountByRarity = map[constants.Rarity]int{
-	constants.RaritySSR: 3,
-	constants.RarityUR:  4,
-}
+type (
+	effectField uint
+
+	// slotRule 描述技能欄位的差異：普攻與主動由行動流程和怒氣決定發動，不填 trigger；
+	// 被動與天賦由 trigger 決定發動時機；只有天賦需要解鎖條件。
+	slotRule struct {
+		trigger bool
+		talent  bool
+	}
+)
 
 // maxEffectNameRunes 為 Buff 與 Status 顯示名稱的長度上限（以字元計）。
 const maxEffectNameRunes = 20
-
-type effectField uint
 
 const (
 	fName effectField = 1 << iota
@@ -34,36 +37,37 @@ const (
 	fCount
 )
 
-var effectFieldNames = []struct {
-	bit  effectField
-	name string
-}{
-	{fName, "name"},
-	{fDamageType, "damageType"},
-	{fStat, "stat"},
-	{fStatus, "status"},
-	{fScaleStat, "scaleStat"},
-	{fValue, "value"},
-	{fDuration, "duration"},
-	{fMaxStack, "maxStack"},
-	{fPermanent, "permanent"},
-	{fNonRemovable, "nonRemovable"},
-	{fCount, "count"},
-}
-
-// slotRule 描述技能欄位的差異：普攻與主動由行動流程和怒氣決定發動，不填 trigger；
-// 被動與天賦由 trigger 決定發動時機；只有天賦需要解鎖條件。
-type slotRule struct {
-	trigger bool
-	talent  bool
-}
-
 var (
+	// talentCountByRarity 為各稀有度固定的天賦技能數量，未列出的稀有度視為 0。
+	talentCountByRarity = map[constants.Rarity]int{
+		constants.RaritySSR: 3,
+		constants.RarityUR:  4,
+	}
+
+	effectFieldNames = []struct {
+		bit  effectField
+		name string
+	}{
+		{fName, "name"},
+		{fDamageType, "damageType"},
+		{fStat, "stat"},
+		{fStatus, "status"},
+		{fScaleStat, "scaleStat"},
+		{fValue, "value"},
+		{fDuration, "duration"},
+		{fMaxStack, "maxStack"},
+		{fPermanent, "permanent"},
+		{fNonRemovable, "nonRemovable"},
+		{fCount, "count"},
+	}
+
 	normalSlot  = slotRule{}
 	activeSlot  = slotRule{}
 	passiveSlot = slotRule{trigger: true}
 	talentSlot  = slotRule{trigger: true, talent: true}
 )
+
+// inner function
 
 func validateSkills(rarity constants.Rarity, cfg *cards.SkillConfig) error {
 	if err := validateSkill(&cfg.NormalAtk, normalSlot); err != nil {

@@ -17,6 +17,42 @@ func NewInventoryService(repo inventory.InventoryRepository) *InventoryService {
 	return &InventoryService{repo: repo}
 }
 
+// inner function
+
+// cardSkills 依普攻、主動、被動、天賦的順序整理技能顯示資料，未設定名稱的技能略過。
+func cardSkills(cfg cards.SkillConfig) []packet.CardSkill {
+	skills := make([]packet.CardSkill, 0, 3+len(cfg.TalentSkill))
+	add := func(skillType string, def cards.SkillDefinition) {
+		if def.Name == "" {
+			return
+		}
+		skill := packet.CardSkill{Type: skillType, Name: def.Name, Desc: def.Desc}
+		if def.Unlock != nil {
+			skill.UnlockStar = def.Unlock.Star
+			skill.UnlockLevel = def.Unlock.Level
+		}
+		skills = append(skills, skill)
+	}
+	add("normalAtk", cfg.NormalAtk)
+	add("activeSkill", cfg.ActiveSkill)
+	add("passiveSkill", cfg.PassiveSkill)
+	for _, talent := range cfg.TalentSkill {
+		add("talent", talent)
+	}
+	return skills
+}
+
+// upgradeCost 為升一級所需經驗，已達上限時回傳 ErrCardMaxLevel。
+func upgradeCost(level int) (int64, error) {
+	need := card.ExpToNext(level)
+	if need == 0 {
+		return 0, inventory.ErrCardMaxLevel
+	}
+	return need, nil
+}
+
+// outer function
+
 func (s *InventoryService) GetBackpack(ctx context.Context, uid string) (*packet.GetBackpackResult, error) {
 	items, err := s.repo.ListItems(ctx, uid)
 	if err != nil {
@@ -62,38 +98,6 @@ func (s *InventoryService) GetCards(ctx context.Context, uid string) (*packet.Ge
 		})
 	}
 	return result, nil
-}
-
-// cardSkills 依普攻、主動、被動、天賦的順序整理技能顯示資料，未設定名稱的技能略過。
-func cardSkills(cfg cards.SkillConfig) []packet.CardSkill {
-	skills := make([]packet.CardSkill, 0, 3+len(cfg.TalentSkill))
-	add := func(skillType string, def cards.SkillDefinition) {
-		if def.Name == "" {
-			return
-		}
-		skill := packet.CardSkill{Type: skillType, Name: def.Name, Desc: def.Desc}
-		if def.Unlock != nil {
-			skill.UnlockStar = def.Unlock.Star
-			skill.UnlockLevel = def.Unlock.Level
-		}
-		skills = append(skills, skill)
-	}
-	add("normalAtk", cfg.NormalAtk)
-	add("activeSkill", cfg.ActiveSkill)
-	add("passiveSkill", cfg.PassiveSkill)
-	for _, talent := range cfg.TalentSkill {
-		add("talent", talent)
-	}
-	return skills
-}
-
-// upgradeCost 為升一級所需經驗，已達上限時回傳 ErrCardMaxLevel。
-func upgradeCost(level int) (int64, error) {
-	need := card.ExpToNext(level)
-	if need == 0 {
-		return 0, inventory.ErrCardMaxLevel
-	}
-	return need, nil
 }
 
 // UpgradeCard 消耗經驗道具將指定卡片升一級。

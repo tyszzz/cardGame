@@ -1,7 +1,7 @@
 package packet
 
-// account packet
 type (
+	// account packet
 	CreateNewAccount struct {
 		AccountId string `json:"accountId"`
 		Password  string `json:"password"`
@@ -12,20 +12,18 @@ type (
 		AccountId string `json:"accountId"`
 		Password  string `json:"password"`
 	}
-)
 
-// summon packet
-type (
+	// summon packet
 	SummonCard struct {
 		PoolId string `json:"poolId"`
 		Times  int32  `json:"times"`
 	}
+
+	// 查詢玩家資料、背包、卡片皆不需要參數，玩家以 session 為準
+	Empty struct{}
+
+	// UpgradeCard 為升級指定卡片一級
+	UpgradeCard struct {
+		CardId string `json:"cardId"`
+	}
 )
-
-// 查詢玩家資料、背包、卡片皆不需要參數，玩家以 session 為準
-type Empty struct{}
-
-// UpgradeCard 為升級指定卡片一級
-type UpgradeCard struct {
-	CardId string `json:"cardId"`
-}

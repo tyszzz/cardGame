@@ -13,17 +13,21 @@ const (
 	StatusStun   Status = 3 // 暈眩
 )
 
-var statusValueToName = map[Status]string{
-	StatusPoison: "Poison",
-	StatusBurn:   "Burn",
-	StatusStun:   "Stun",
-}
+var (
+	statusValueToName = map[Status]string{
+		StatusPoison: "Poison",
+		StatusBurn:   "Burn",
+		StatusStun:   "Stun",
+	}
 
-var statusNameToValue = map[string]Status{
-	"Poison": StatusPoison,
-	"Burn":   StatusBurn,
-	"Stun":   StatusStun,
-}
+	statusNameToValue = map[string]Status{
+		"Poison": StatusPoison,
+		"Burn":   StatusBurn,
+		"Stun":   StatusStun,
+	}
+)
+
+// outer function
 
 func (v Status) String() string {
 	if name, ok := statusValueToName[v]; ok {

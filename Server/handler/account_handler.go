@@ -11,11 +11,12 @@ import (
 	"github.com/topfreegames/pitaya/v2/component"
 )
 
-type AccountService interface {
-	CreateNewAccount(ctx context.Context, data *packet.CreateNewAccount) (bool, error)
-	Login(ctx context.Context, data *packet.Login) (bool, string, error)
-}
 type (
+	AccountService interface {
+		CreateNewAccount(ctx context.Context, data *packet.CreateNewAccount) (bool, error)
+		Login(ctx context.Context, data *packet.Login) (bool, string, error)
+	}
+
 	AccountHandler struct {
 		component.Base
 		as AccountService
@@ -27,6 +28,8 @@ func NewAccountHandler(as AccountService) *AccountHandler {
 		as: as,
 	}
 }
+
+// outer function
 
 func (h *AccountHandler) CreateNewAccount(
 	ctx context.Context,

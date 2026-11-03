@@ -16,21 +16,25 @@ const (
 	RaceHybrid Race = 5 // 混血
 )
 
-var raceValueToName = map[Race]string{
-	RaceHuman:  "Human",
-	RaceXian:   "Xian",
-	RaceMo:     "Mo",
-	RaceDragon: "Dragon",
-	RaceHybrid: "Hybrid",
-}
+var (
+	raceValueToName = map[Race]string{
+		RaceHuman:  "Human",
+		RaceXian:   "Xian",
+		RaceMo:     "Mo",
+		RaceDragon: "Dragon",
+		RaceHybrid: "Hybrid",
+	}
 
-var raceNameToValue = map[string]Race{
-	"Human":  RaceHuman,
-	"Xian":   RaceXian,
-	"Mo":     RaceMo,
-	"Dragon": RaceDragon,
-	"Hybrid": RaceHybrid,
-}
+	raceNameToValue = map[string]Race{
+		"Human":  RaceHuman,
+		"Xian":   RaceXian,
+		"Mo":     RaceMo,
+		"Dragon": RaceDragon,
+		"Hybrid": RaceHybrid,
+	}
+)
+
+// outer function
 
 func (r Race) String() string {
 	if name, ok := raceValueToName[r]; ok {

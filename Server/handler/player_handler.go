@@ -9,18 +9,22 @@ import (
 	"github.com/topfreegames/pitaya/v2/component"
 )
 
-type PlayerService interface {
-	GetInfo(ctx context.Context, uid string) (*packet.GetInfoResult, error)
-}
+type (
+	PlayerService interface {
+		GetInfo(ctx context.Context, uid string) (*packet.GetInfoResult, error)
+	}
 
-type PlayerHandler struct {
-	component.Base
-	ps PlayerService
-}
+	PlayerHandler struct {
+		component.Base
+		ps PlayerService
+	}
+)
 
 func NewPlayerHandler(ps PlayerService) *PlayerHandler {
 	return &PlayerHandler{ps: ps}
 }
+
+// outer function
 
 // GetInfo 回傳目前登入玩家的基本資料與貨幣，uid 以登入後綁定的 session 為準。
 func (h *PlayerHandler) GetInfo(ctx context.Context, _ *packet.Empty) (*packet.GetInfoResult, error) {

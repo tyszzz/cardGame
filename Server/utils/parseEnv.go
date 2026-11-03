@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+// inner function
+
 func initEnv() {
 	// 變數設定 讀取 game.yaml ，若有變更 可以使用環境變數方式修改
 	// 若環境變數有設定(全大寫 底線會被置換為 "." ) 以環境變數為主

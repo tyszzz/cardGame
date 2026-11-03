@@ -22,6 +22,7 @@ func InitAccountRepo(db *gorm.DB) *AccountRepo {
 }
 
 // inner function
+
 func toAccountEntity(data *postgresDto.Account) *account.Account {
 	return &account.Account{
 		AccountId:    data.AccountId,
@@ -61,6 +62,8 @@ func toPlayerCurrencyDtos(data *player.Player) []postgresDto.PlayerCurrency {
 	}
 	return currencies
 }
+
+// outer function
 
 // interface implementation
 func (r *AccountRepo) CreateNewAccount(ctx context.Context, accountData *account.Account, playerData *player.Player) error {

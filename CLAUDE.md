@@ -64,6 +64,7 @@ database/seed.sh v01         # 套用 database/seed/<version>/*.sql，需指定�
 - 重複帳戶判斷依賴 DB primary key/unique constraint，service 捕捉 duplicate key 後轉成業務錯誤。
 - Pitaya response 以匿名嵌入 `BaseResult`（`resultCode`）共用結構。
 - 前端驗證只改善 UX，後端必須重新驗證所有輸入。
+- Go 檔案（非測試檔）的宣告順序固定，詳見 @docs/project-context.md 的「Go 檔案宣告順序」：`type` → `const` → `var` → 建構函式（`New*`/`Init*`）→ `// inner function`（小寫開頭，僅 package 內使用）→ `// outer function`（大寫開頭，供外部使用）；同一頁有多個 struct 時合併為 `type ( ... )`，多個 `var` 合併為 `var ( ... )`。新增或修改程式碼時遵守，不要為了排序另外做無關的重構。
 
 ## 安全
 

@@ -14,19 +14,23 @@ const (
 	RarityUR  Rarity = 4
 )
 
-var rarityValueToName = map[Rarity]string{
-	RarityR:   "R",
-	RaritySR:  "SR",
-	RaritySSR: "SSR",
-	RarityUR:  "UR",
-}
+var (
+	rarityValueToName = map[Rarity]string{
+		RarityR:   "R",
+		RaritySR:  "SR",
+		RaritySSR: "SSR",
+		RarityUR:  "UR",
+	}
 
-var rarityNameToValue = map[string]Rarity{
-	"R":   RarityR,
-	"SR":  RaritySR,
-	"SSR": RaritySSR,
-	"UR":  RarityUR,
-}
+	rarityNameToValue = map[string]Rarity{
+		"R":   RarityR,
+		"SR":  RaritySR,
+		"SSR": RaritySSR,
+		"UR":  RarityUR,
+	}
+)
+
+// outer function
 
 func (r Rarity) String() string {
 	if name, ok := rarityValueToName[r]; ok {

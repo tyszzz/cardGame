@@ -13,17 +13,21 @@ const (
 	SideSelf  Side = 3 // 自己
 )
 
-var sideValueToName = map[Side]string{
-	SideEnemy: "Enemy",
-	SideAlly:  "Ally",
-	SideSelf:  "Self",
-}
+var (
+	sideValueToName = map[Side]string{
+		SideEnemy: "Enemy",
+		SideAlly:  "Ally",
+		SideSelf:  "Self",
+	}
 
-var sideNameToValue = map[string]Side{
-	"Enemy": SideEnemy,
-	"Ally":  SideAlly,
-	"Self":  SideSelf,
-}
+	sideNameToValue = map[string]Side{
+		"Enemy": SideEnemy,
+		"Ally":  SideAlly,
+		"Self":  SideSelf,
+	}
+)
+
+// outer function
 
 func (v Side) String() string {
 	if name, ok := sideValueToName[v]; ok {

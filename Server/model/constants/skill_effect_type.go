@@ -18,27 +18,31 @@ const (
 	EffectTypeShield  EffectType = 8 // 護盾
 )
 
-var effectTypeValueToName = map[EffectType]string{
-	EffectTypeDamage:  "Damage",
-	EffectTypeStatus:  "Status",
-	EffectTypeHeal:    "Heal",
-	EffectTypeBuff:    "Buff",
-	EffectTypeRage:    "Rage",
-	EffectTypeDispel:  "Dispel",
-	EffectTypeCleanse: "Cleanse",
-	EffectTypeShield:  "Shield",
-}
+var (
+	effectTypeValueToName = map[EffectType]string{
+		EffectTypeDamage:  "Damage",
+		EffectTypeStatus:  "Status",
+		EffectTypeHeal:    "Heal",
+		EffectTypeBuff:    "Buff",
+		EffectTypeRage:    "Rage",
+		EffectTypeDispel:  "Dispel",
+		EffectTypeCleanse: "Cleanse",
+		EffectTypeShield:  "Shield",
+	}
 
-var effectTypeNameToValue = map[string]EffectType{
-	"Damage":  EffectTypeDamage,
-	"Status":  EffectTypeStatus,
-	"Heal":    EffectTypeHeal,
-	"Buff":    EffectTypeBuff,
-	"Rage":    EffectTypeRage,
-	"Dispel":  EffectTypeDispel,
-	"Cleanse": EffectTypeCleanse,
-	"Shield":  EffectTypeShield,
-}
+	effectTypeNameToValue = map[string]EffectType{
+		"Damage":  EffectTypeDamage,
+		"Status":  EffectTypeStatus,
+		"Heal":    EffectTypeHeal,
+		"Buff":    EffectTypeBuff,
+		"Rage":    EffectTypeRage,
+		"Dispel":  EffectTypeDispel,
+		"Cleanse": EffectTypeCleanse,
+		"Shield":  EffectTypeShield,
+	}
+)
+
+// outer function
 
 func (v EffectType) String() string {
 	if name, ok := effectTypeValueToName[v]; ok {

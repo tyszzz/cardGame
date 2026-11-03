@@ -2,14 +2,12 @@ package account
 
 import "errors"
 
-// database error
 var (
+	// database error
 	ErrDuplicateKey         = errors.New("account_already_exists")
 	ErrNicknameDuplicateKey = errors.New("nickname_already_exists")
-)
 
-// account error
-var (
+	// account error
 	ErrInvalidAccountID = errors.New("invalid account id")
 	ErrInvalidPassword  = errors.New("invalid password")
 	ErrAccountIDLength  = errors.New("accountId length must be between 3 and 20")

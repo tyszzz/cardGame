@@ -13,17 +13,21 @@ const (
 	DamageTypeTrue     DamageType = 3 // 真實
 )
 
-var damageTypeValueToName = map[DamageType]string{
-	DamageTypePhysical: "Physical",
-	DamageTypeMagic:    "Magic",
-	DamageTypeTrue:     "True",
-}
+var (
+	damageTypeValueToName = map[DamageType]string{
+		DamageTypePhysical: "Physical",
+		DamageTypeMagic:    "Magic",
+		DamageTypeTrue:     "True",
+	}
 
-var damageTypeNameToValue = map[string]DamageType{
-	"Physical": DamageTypePhysical,
-	"Magic":    DamageTypeMagic,
-	"True":     DamageTypeTrue,
-}
+	damageTypeNameToValue = map[string]DamageType{
+		"Physical": DamageTypePhysical,
+		"Magic":    DamageTypeMagic,
+		"True":     DamageTypeTrue,
+	}
+)
+
+// outer function
 
 func (v DamageType) String() string {
 	if name, ok := damageTypeValueToName[v]; ok {

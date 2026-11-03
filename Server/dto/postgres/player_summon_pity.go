@@ -10,4 +10,6 @@ type PlayerSummonPity struct {
 	UpdatedAt      time.Time `gorm:"column:updated_at;autoUpdateTime"`
 }
 
+// outer function
+
 func (PlayerSummonPity) TableName() string { return "player_summon_pity" }

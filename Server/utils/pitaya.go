@@ -23,6 +23,8 @@ var (
 	sp         session.SessionPool
 )
 
+// outer function
+
 func App() pitaya.Pitaya {
 	onceAction.Do(func() {
 		var (
@@ -43,6 +45,7 @@ func App() pitaya.Pitaya {
 	})
 	return app
 }
+
 func BeforeHandler(ctx context.Context, in interface{}) (context.Context, interface{}, error) {
 	var (
 		session  = GetSessionFromCtx(ctx)
