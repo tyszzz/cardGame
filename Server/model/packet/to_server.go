@@ -24,3 +24,8 @@ type (
 
 // 查詢玩家資料、背包、卡片皆不需要參數，玩家以 session 為準
 type Empty struct{}
+
+// UpgradeCard 為升級指定卡片一級
+type UpgradeCard struct {
+	CardId string `json:"cardId"`
+}

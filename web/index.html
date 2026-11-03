@@ -58,8 +58,29 @@
         </section>
 
         <section id="owned-cards-panel" class="panel" data-tab="cards" hidden>
-          <h2 id="owned-cards-title">卡片</h2>
-          <div id="owned-cards" class="cards"></div>
+          <div id="card-list-view">
+            <h2 id="owned-cards-title">卡片</h2>
+            <div id="owned-cards" class="cards"></div>
+          </div>
+
+          <div id="card-detail-view" class="card-detail" hidden>
+            <button id="card-detail-back" class="link" type="button">‹ 返回卡片列表</button>
+            <div class="detail-image" aria-label="卡片圖片">圖片預留</div>
+            <div class="detail-head">
+              <span id="detail-rarity" class="rarity"></span>
+              <strong id="detail-name"></strong>
+              <span id="detail-meta" class="muted"></span>
+            </div>
+            <div class="detail-stats">
+              <div><span class="label">攻擊</span><span id="detail-attack" class="value"></span></div>
+              <div><span class="label">防禦</span><span id="detail-defense" class="value"></span></div>
+              <div><span class="label">生命</span><span id="detail-health" class="value"></span></div>
+            </div>
+            <div id="detail-skills" class="skill-icons"></div>
+            <div id="detail-skill-info" class="skill-info"></div>
+            <p id="upgrade-status" class="status" role="status"></p>
+            <button id="detail-upgrade" class="primary" type="button"></button>
+          </div>
         </section>
 
         <div id="summon-panel" data-tab="summon" hidden>

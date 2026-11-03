@@ -178,3 +178,70 @@ button.link:hover { color: var(--text); }
   color: var(--muted);
   white-space: pre-wrap;
 }
+
+.card.clickable { cursor: pointer; transition: transform 0.15s; }
+.card.clickable:hover, .card.clickable:focus-visible { transform: translateY(-3px); outline: none; }
+
+.card-detail { display: flex; flex-direction: column; gap: 14px; }
+.card-detail > .link { align-self: flex-start; padding-left: 0; }
+.detail-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 4 / 3;
+  max-height: 320px;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--muted);
+}
+.detail-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.detail-head strong { font-size: 22px; }
+.detail-head .rarity { font-weight: 800; color: var(--muted); }
+.detail-head .rarity.R { color: var(--r); }
+.detail-head .rarity.SR { color: var(--sr); }
+.detail-head .rarity.SSR { color: var(--ssr); }
+.detail-head .rarity.UR { color: var(--ur); }
+.detail-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.detail-stats > div { background: var(--bg); border-radius: 8px; padding: 10px; text-align: center; }
+.detail-stats .label { display: block; font-size: 12px; color: var(--muted); }
+.detail-stats .value { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.skill-icons { display: flex; gap: 12px; flex-wrap: wrap; }
+.skill-icon {
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  font-size: 13px;
+  font-weight: 700;
+}
+.skill-icon.normalAtk { color: var(--r); }
+.skill-icon.activeSkill { color: var(--ur); }
+.skill-icon.passiveSkill { color: var(--ssr); }
+.skill-icon.talent { color: var(--sr); }
+.skill-icon:hover { border-color: var(--muted); }
+.skill-icon.active { border-color: var(--accent); background: var(--panel); }
+.skill-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 96px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+.skill-info p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.skill-entry.locked strong, .skill-entry.locked p { opacity: 0.5; }
+.unlock-badge {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+}
+.unlock-badge.locked { background: var(--border); color: var(--muted); }

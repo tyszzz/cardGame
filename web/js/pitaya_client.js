@@ -106,6 +106,10 @@ export class PitayaClient {
     return this.request("CardHandler.GetCards", {});
   }
 
+  upgradeCard(cardId) {
+    return this.request("CardHandler.UpgradeCard", { cardId });
+  }
+
   publish(route, body) {
     if (!this.ws) throw new Error("WebSocket connection is not established.");
     this.ws.send(encodeNotify(route, body));

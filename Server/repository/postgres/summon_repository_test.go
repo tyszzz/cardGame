@@ -3,6 +3,7 @@ package postgres
 import (
 	"cardGame/feature/account"
 	"cardGame/feature/card"
+	"cardGame/feature/inventory"
 	"cardGame/feature/player"
 	"cardGame/feature/summon"
 	"cardGame/model/constants"
@@ -37,7 +38,7 @@ func newSummonTestEnv(t *testing.T) (*gorm.DB, *SummonRepo, string) {
 		`INSERT INTO summon_pools (pool_id, pool_name, currency_type, costs, rarity_weights, ten_pull_min_rarity, up_rates, pity_threshold, pity_min_rarity, up_guarantee, start_at, end_at)
 		 VALUES ('it_pity','IT Pity',2,'{"1":200,"10":1800}','{"R":50,"SR":30,"SSR":20}',3,'{"SSR":50}',20,3,TRUE,'2026-01-01T00:00:00Z','2027-01-01T00:00:00Z') ON CONFLICT (pool_id) DO NOTHING`,
 		`INSERT INTO summon_pool_cards (pool_id, card_id, is_up) VALUES ('it_pity','it_limited',TRUE) ON CONFLICT DO NOTHING`,
-		`INSERT INTO items (item_id, item_name, item_type, rarity) VALUES ('shard_r','R',1,1),('shard_sr','SR',1,2) ON CONFLICT (item_id) DO NOTHING`,
+		`INSERT INTO items (item_id, item_name, item_type, rarity) VALUES ('shard_r','R',1,1),('shard_sr','SR',1,2),('exp_card','EXP',2,1) ON CONFLICT (item_id) DO NOTHING`,
 	} {
 		if err := db.Exec(stmt).Error; err != nil {
 			t.Fatal(err)
@@ -445,5 +446,74 @@ func TestInventoryRepoLists(t *testing.T) {
 	items, err = repo.ListItems(ctx, uid)
 	if err != nil || len(items) != 1 || items[0].ItemId != "shard_sr" || items[0].Quantity != 7 || items[0].ItemType != constants.ItemTypeShard {
 		t.Errorf("items (zero quantity hidden): %v, err %v", items, err)
+	}
+}
+
+func TestInventoryRepoUpgradeCard(t *testing.T) {
+	db, _, uid := newSummonTestEnv(t)
+	repo := InitInventoryRepo(db)
+	ctx := context.Background()
+	cost := func(level int) (int64, error) {
+		if level >= 3 {
+			return 0, inventory.ErrCardMaxLevel
+		}
+		return 100, nil
+	}
+	exec := func(q string, args ...any) {
+		t.Helper()
+		if err := db.Exec(q, args...).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	exec("UPDATE cards SET base_config = ? WHERE card_id = 'it_r1'", `{"attack":500,"attackRatio":1.2,"defense":100,"defenseRatio":1,"health":8000,"healthRatio":0.8}`)
+	exec("INSERT INTO player_cards (uid, card_id) VALUES (?, 'it_r1')", uid)
+
+	if _, err := repo.UpgradeCard(ctx, uid, "it_sr1", "exp_card", cost); !errors.Is(err, inventory.ErrCardNotOwned) {
+		t.Errorf("not owned err = %v", err)
+	}
+	if _, err := repo.UpgradeCard(ctx, uid, "it_r1", "exp_card", cost); !errors.Is(err, inventory.ErrNotEnoughExp) {
+		t.Errorf("no exp item err = %v", err)
+	}
+	exec("INSERT INTO player_items (uid, item_id, quantity) VALUES (?, 'exp_card', 99)", uid)
+	if _, err := repo.UpgradeCard(ctx, uid, "it_r1", "exp_card", cost); !errors.Is(err, inventory.ErrNotEnoughExp) {
+		t.Errorf("99 exp err = %v", err)
+	}
+	if lvl := scalar[int](t, db, "SELECT level FROM player_cards WHERE uid = ?", uid); lvl != 1 {
+		t.Errorf("failed upgrade must not change level, got %d", lvl)
+	}
+
+	exec("UPDATE player_items SET quantity = 250 WHERE uid = ? AND item_id = 'exp_card'", uid)
+	res, err := repo.UpgradeCard(ctx, uid, "it_r1", "exp_card", cost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Level != 2 || res.ExpRemaining != 150 || res.Base.Attack != 500 {
+		t.Errorf("unexpected result: %+v", res)
+	}
+
+	// 並發：只剩 150 經驗，同時升級 5 次，只有 1 次能成功（升到 3 級後再升會 ErrCardMaxLevel 或經驗不足）
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	ok := 0
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := repo.UpgradeCard(ctx, uid, "it_r1", "exp_card", cost); err == nil {
+				mu.Lock()
+				ok++
+				mu.Unlock()
+			}
+		}()
+	}
+	wg.Wait()
+	if ok != 1 {
+		t.Errorf("concurrent upgrades succeeded %d times, want 1", ok)
+	}
+	if lvl := scalar[int](t, db, "SELECT level FROM player_cards WHERE uid = ?", uid); lvl != 3 {
+		t.Errorf("level = %d, want 3", lvl)
+	}
+	if qty := scalar[int](t, db, "SELECT quantity FROM player_items WHERE uid = ? AND item_id = 'exp_card'", uid); qty != 50 {
+		t.Errorf("exp left = %d, want 50", qty)
 	}
 }

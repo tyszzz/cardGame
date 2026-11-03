@@ -10,6 +10,12 @@ const SUMMON_RESULT_MESSAGES = {
   8: "伺服器召喚失敗",
   9: "卡池不可用",
 };
+const UPGRADE_RESULT_MESSAGES = {
+  11: "卡片無效或尚未擁有",
+  12: "已達等級上限",
+  13: "經驗道具不足",
+  14: "伺服器升級失敗",
+};
 const CURRENCY_LABELS = [
   ["coin", "金幣"],
   ["diamond", "鑽石"],
@@ -158,12 +164,14 @@ function setSummonButtons(disabled) {
   for (const button of document.querySelectorAll("[data-summon]")) {
     button.disabled = disabled;
   }
+  updateUpgradeButton();
 }
 
 async function enterGame(accountId, loginResult) {
   $("account-name").textContent = accountId;
   $("account-name").dataset.account = accountId;
   resetTabs();
+  setStatus("upgrade-status", "");
   $("cards").replaceChildren();
   $("pity").textContent = "";
   $("log").textContent = "";
@@ -232,31 +240,194 @@ async function refreshBackpack() {
   }
 }
 
+// 目前持有的卡片（依 cardId 索引）與詳細畫面正在顯示的卡片
+const ownedCards = new Map();
+let detailCardId = null;
+const SKILL_TYPE_LABELS = { normalAtk: "普攻", activeSkill: "主動", passiveSkill: "被動", talent: "天賦" };
+
+function renderCardList() {
+  const container = $("owned-cards");
+  container.replaceChildren();
+  $("owned-cards-title").textContent = `卡片（${ownedCards.size}）`;
+  if (!ownedCards.size) container.textContent = "尚未擁有卡片";
+  [...ownedCards.values()].forEach((card, index) => {
+    const element = document.createElement("div");
+    element.className = `card clickable ${card.rarity ?? ""}`;
+    element.setAttribute("role", "button");
+    element.tabIndex = 0;
+    element.style.setProperty("--i", index);
+    const rarity = document.createElement("div");
+    rarity.className = "rarity";
+    rarity.textContent = card.rarity;
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = card.cardName;
+    const detail = document.createElement("div");
+    detail.className = "detail";
+    detail.textContent = `${card.race}　Lv.${card.level}${card.isLocked ? "　已鎖定" : ""}`;
+    element.append(rarity, name, detail);
+    element.addEventListener("click", () => showCardDetail(card.cardId));
+    element.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        showCardDetail(card.cardId);
+      }
+    });
+    container.append(element);
+  });
+}
+
+function showCardList() {
+  detailCardId = null;
+  $("card-detail-view").hidden = true;
+  $("card-list-view").hidden = false;
+}
+
+function showCardDetail(cardId) {
+  detailCardId = cardId;
+  setStatus("upgrade-status", "");
+  selectedSkillType = "normalAtk";
+  $("card-list-view").hidden = true;
+  $("card-detail-view").hidden = false;
+  renderCardDetail();
+}
+
+function updateUpgradeButton() {
+  const card = ownedCards.get(detailCardId);
+  $("detail-upgrade").disabled = busy || !card || card.nextExp === 0;
+}
+
+function renderCardDetail() {
+  const card = ownedCards.get(detailCardId);
+  if (!card) return showCardList();
+
+  const rarity = $("detail-rarity");
+  rarity.textContent = card.rarity;
+  rarity.className = `rarity ${card.rarity ?? ""}`;
+  $("detail-name").textContent = card.cardName;
+  $("detail-meta").textContent = `${card.race}　Lv.${card.level}${card.isLocked ? "　已鎖定" : ""}`;
+  $("detail-attack").textContent = card.attack.toLocaleString();
+  $("detail-defense").textContent = card.defense.toLocaleString();
+  $("detail-health").textContent = card.health.toLocaleString();
+  $("detail-upgrade").textContent = card.nextExp === 0 ? "已滿級" : `升級（經驗 ${card.nextExp.toLocaleString()}）`;
+  updateUpgradeButton();
+
+  renderSkills(card);
+}
+
+// 尚未有星數系統，所有卡片暫視為 1 星；之後後端回傳 star 時改用真實值
+const CARD_STAR = 1;
+
+function skillUnlockText(skill, card) {
+  const conditions = [];
+  if (skill.unlockStar > CARD_STAR) conditions.push(`${skill.unlockStar} 星`);
+  if (skill.unlockLevel > card.level) conditions.push(`Lv.${skill.unlockLevel}`);
+  return conditions.length ? { unlocked: false, text: `需 ${conditions.join("、")}` } : { unlocked: true, text: "已解鎖" };
+}
+
+// 技能分組：普攻、主動、被動各一顆 icon，所有天賦合併為一顆
+function groupSkills(skills) {
+  const groups = [];
+  const talents = [];
+  for (const skill of skills) {
+    if (skill.type === "talent") talents.push(skill);
+    else groups.push({ type: skill.type, skills: [skill] });
+  }
+  if (talents.length) groups.push({ type: "talent", skills: talents });
+  return groups;
+}
+
+let selectedSkillType = "normalAtk";
+
+function renderSkills(card) {
+  const groups = groupSkills(card.skills ?? []);
+  if (!groups.some((group) => group.type === selectedSkillType)) selectedSkillType = groups[0]?.type;
+
+  const icons = $("detail-skills");
+  icons.replaceChildren();
+  for (const group of groups) {
+    const icon = document.createElement("button");
+    icon.type = "button";
+    icon.className = `skill-icon ${group.type}${group.type === selectedSkillType ? " active" : ""}`;
+    icon.textContent = SKILL_TYPE_LABELS[group.type] ?? "技";
+    icon.addEventListener("click", () => {
+      selectedSkillType = group.type;
+      renderSkills(card);
+    });
+    icons.append(icon);
+  }
+
+  const info = $("detail-skill-info");
+  info.replaceChildren();
+  const selected = groups.find((group) => group.type === selectedSkillType);
+  if (!selected) {
+    info.textContent = "沒有技能資料";
+    return;
+  }
+  for (const skill of selected.skills) {
+    const entry = document.createElement("div");
+    entry.className = "skill-entry";
+    const title = document.createElement("strong");
+    title.textContent = `${SKILL_TYPE_LABELS[skill.type] ?? "技能"}・${skill.name}`;
+    entry.append(title);
+    if (skill.type === "talent") {
+      const unlock = skillUnlockText(skill, card);
+      entry.classList.toggle("locked", !unlock.unlocked);
+      const badge = document.createElement("span");
+      badge.className = `unlock-badge${unlock.unlocked ? "" : " locked"}`;
+      badge.textContent = unlock.text;
+      title.append(badge);
+    }
+    const desc = document.createElement("p");
+    desc.textContent = skill.desc;
+    entry.append(desc);
+    info.append(entry);
+  }
+}
+
 async function refreshOwnedCards() {
   const container = $("owned-cards");
   try {
     const result = await spaced(() => client.getCards());
-    $("owned-cards-title").textContent = `卡片（${result.cards?.length ?? 0}）`;
-    container.replaceChildren();
-    if (!result.cards?.length) container.textContent = "尚未擁有卡片";
-    (result.cards ?? []).forEach((card, index) => {
-      const element = document.createElement("div");
-      element.className = `card ${card.rarity ?? ""}`;
-      element.style.setProperty("--i", index);
-      const rarity = document.createElement("div");
-      rarity.className = "rarity";
-      rarity.textContent = card.rarity;
-      const name = document.createElement("div");
-      name.className = "name";
-      name.textContent = card.cardName;
-      const detail = document.createElement("div");
-      detail.className = "detail";
-      detail.textContent = `${card.race}　Lv.${card.level}${card.isLocked ? "　已鎖定" : ""}`;
-      element.append(rarity, name, detail);
-      container.append(element);
-    });
+    ownedCards.clear();
+    for (const card of result.cards ?? []) ownedCards.set(card.cardId, card);
+    renderCardList();
+    if (detailCardId !== null) renderCardDetail();
   } catch (error) {
     container.textContent = `卡片查詢失敗：${error.message}`;
+  }
+}
+
+async function upgradeCard() {
+  const cardId = detailCardId;
+  if (busy || cardId === null) return;
+  busy = true;
+  setSummonButtons(true);
+  setStatus("upgrade-status", "升級中...");
+  try {
+    const result = await client.upgradeCard(cardId);
+    const code = result?.resultCode ?? 0;
+    if (code !== 0) {
+      setStatus("upgrade-status", `升級失敗：${UPGRADE_RESULT_MESSAGES[code] ?? `resultCode ${code}`}`, true);
+    } else {
+      // 直接用升級結果更新該卡片，不重新查詢整個列表；背包的經驗道具數量改為下次點開時重新查詢
+      Object.assign(ownedCards.get(cardId), {
+        level: result.level,
+        attack: result.attack,
+        defense: result.defense,
+        health: result.health,
+        nextExp: result.nextExp,
+      });
+      loadedTabs.delete("backpack");
+      renderCardList();
+      setStatus("upgrade-status", `升級成功：Lv.${result.level}，剩餘經驗道具 ${result.expRemaining.toLocaleString()}`);
+    }
+  } catch (error) {
+    setStatus("upgrade-status", `升級失敗：${error.message}`, true);
+  } finally {
+    busy = false;
+    setSummonButtons(false);
+    if (detailCardId === cardId) renderCardDetail();
   }
 }
 
@@ -278,6 +449,8 @@ const loadedTabs = new Set();
 function resetTabs() {
   activeTab = null;
   loadedTabs.clear();
+  ownedCards.clear();
+  showCardList();
   for (const { panel } of Object.values(TABS)) $(panel).hidden = true;
   for (const button of document.querySelectorAll("[data-tab-button]")) {
     button.classList.remove("active");
@@ -402,4 +575,6 @@ $("logout-button").addEventListener("click", logout);
 for (const button of document.querySelectorAll("[data-tab-button]")) {
   button.addEventListener("click", () => selectTab(button.dataset.tabButton));
 }
+$("card-detail-back").addEventListener("click", showCardList);
+$("detail-upgrade").addEventListener("click", upgradeCard);
 window.addEventListener("beforeunload", () => client.close());

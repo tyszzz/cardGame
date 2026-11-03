@@ -86,7 +86,8 @@ type (
 
 	GetCardsResult struct {
 		BaseResult
-		Cards []OwnedCard `json:"cards"`
+		MaxLevel int         `json:"maxLevel"`
+		Cards    []OwnedCard `json:"cards"`
 	}
 
 	OwnedCard struct {
@@ -97,5 +98,31 @@ type (
 		Level      int32            `json:"level"`
 		IsLocked   bool             `json:"isLocked"`
 		ObtainedAt int64            `json:"obtainedAt"` // unix 秒
+		Attack     int              `json:"attack"`
+		Defense    int              `json:"defense"`
+		Health     int              `json:"health"`
+		NextExp    int64            `json:"nextExp"` // 升到下一級所需經驗，已達上限為 0
+		Skills     []CardSkill      `json:"skills"`
+	}
+
+	// CardSkill 為卡片技能的顯示資料，type 為 normalAtk、activeSkill、passiveSkill 或 talent
+	CardSkill struct {
+		Type string `json:"type"`
+		Name string `json:"name"`
+		Desc string `json:"desc"`
+		// 解鎖條件，0 代表沒有該條件
+		UnlockStar  int `json:"unlockStar,omitempty"`
+		UnlockLevel int `json:"unlockLevel,omitempty"`
+	}
+
+	UpgradeCardResult struct {
+		BaseResult
+		CardId       string `json:"cardId"`
+		Level        int32  `json:"level"`
+		Attack       int    `json:"attack"`
+		Defense      int    `json:"defense"`
+		Health       int    `json:"health"`
+		NextExp      int64  `json:"nextExp"`      // 升到下一級所需經驗，已達上限為 0
+		ExpRemaining int64  `json:"expRemaining"` // 升級後剩餘的經驗道具數量
 	}
 )

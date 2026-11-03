@@ -8,5 +8,6 @@ const (
 type ItemType int16
 
 const (
-	ItemTypeShard ItemType = 1 // 碎片
+	ItemTypeShard    ItemType = 1 // 碎片
+	ItemTypeMaterial ItemType = 2 // 素材（例如卡片升級經驗）
 )

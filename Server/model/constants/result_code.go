@@ -16,3 +16,11 @@ const (
 )
 
 const PlayerQueryFailed = 10 // 查詢玩家資料失敗（伺服器端錯誤）
+
+// 卡片升級
+const (
+	CardUpgradeInvalidRequest = 11 // 卡片 ID 無效或玩家未持有該卡
+	CardUpgradeMaxLevel       = 12 // 已達等級上限
+	CardUpgradeNotEnoughExp   = 13 // 經驗道具不足
+	CardUpgradeFailed         = 14 // 伺服器端錯誤
+)
