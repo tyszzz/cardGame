@@ -3,8 +3,8 @@ package postgres
 import (
 	"cardGame/feature/account"
 	"cardGame/feature/card"
+	"cardGame/feature/growth"
 	"cardGame/feature/inventory"
-	"cardGame/feature/level"
 	"cardGame/feature/player"
 	"cardGame/feature/summon"
 	"cardGame/model/constants"
@@ -450,15 +450,16 @@ func TestInventoryRepoLists(t *testing.T) {
 	}
 }
 
-func TestInventoryRepoUpgradeCard(t *testing.T) {
+func TestInventoryRepoApplyCardChange(t *testing.T) {
 	db, _, uid := newSummonTestEnv(t)
 	repo := InitInventoryRepo(db)
 	ctx := context.Background()
-	cost := func(level int) (int64, error) {
-		if level >= 3 {
-			return 0, inventory.ErrCardMaxLevel
+	// 每次升 1 級，費用 100 經驗；等級 3 以上不能再升
+	plan := func(st inventory.CardState) (inventory.CardChange, error) {
+		if st.Level >= 3 {
+			return inventory.CardChange{}, inventory.ErrCardMaxLevel
 		}
-		return 100, nil
+		return inventory.CardChange{Levels: 1, Costs: []inventory.ItemCost{{ItemId: "exp_card", Quantity: 100}}}, nil
 	}
 	exec := func(q string, args ...any) {
 		t.Helper()
@@ -469,30 +470,30 @@ func TestInventoryRepoUpgradeCard(t *testing.T) {
 	exec("UPDATE cards SET base_config = ? WHERE card_id = 'it_r1'", `{"attack":500,"attackRatio":1.2,"defense":100,"defenseRatio":1,"health":8000,"healthRatio":0.8}`)
 	exec("INSERT INTO player_cards (uid, card_id) VALUES (?, 'it_r1')", uid)
 
-	if _, err := repo.UpgradeCard(ctx, uid, "it_sr1", "exp_card", 1, cost); !errors.Is(err, inventory.ErrCardNotOwned) {
+	if _, err := repo.ApplyCardChange(ctx, uid, "it_sr1", plan); !errors.Is(err, inventory.ErrCardNotOwned) {
 		t.Errorf("not owned err = %v", err)
 	}
-	if _, err := repo.UpgradeCard(ctx, uid, "it_r1", "exp_card", 1, cost); !errors.Is(err, inventory.ErrNotEnoughExp) {
+	if _, err := repo.ApplyCardChange(ctx, uid, "it_r1", plan); !errors.Is(err, inventory.ErrNotEnoughItems) {
 		t.Errorf("no exp item err = %v", err)
 	}
 	exec("INSERT INTO player_items (uid, item_id, quantity) VALUES (?, 'exp_card', 99)", uid)
-	if _, err := repo.UpgradeCard(ctx, uid, "it_r1", "exp_card", 1, cost); !errors.Is(err, inventory.ErrNotEnoughExp) {
+	if _, err := repo.ApplyCardChange(ctx, uid, "it_r1", plan); !errors.Is(err, inventory.ErrNotEnoughItems) {
 		t.Errorf("99 exp err = %v", err)
 	}
 	if lvl := scalar[int](t, db, "SELECT level FROM player_cards WHERE uid = ?", uid); lvl != 1 {
-		t.Errorf("failed upgrade must not change level, got %d", lvl)
+		t.Errorf("failed change must not change level, got %d", lvl)
 	}
 
 	exec("UPDATE player_items SET quantity = 250 WHERE uid = ? AND item_id = 'exp_card'", uid)
-	res, err := repo.UpgradeCard(ctx, uid, "it_r1", "exp_card", 1, cost)
+	res, err := repo.ApplyCardChange(ctx, uid, "it_r1", plan)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Level != 2 || res.ExpRemaining != 150 || res.Base.Attack != 500 {
+	if res.State.Level != 2 || res.State.Rarity != constants.RarityR || res.Remaining["exp_card"] != 150 || res.Base.Attack != 500 {
 		t.Errorf("unexpected result: %+v", res)
 	}
 
-	// 並發：只剩 150 經驗，同時升級 5 次，只有 1 次能成功（升到 3 級後再升會 ErrCardMaxLevel 或經驗不足）
+	// 並發：只剩 150 經驗，同時升級 5 次，只有 1 次能成功
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	ok := 0
@@ -500,7 +501,7 @@ func TestInventoryRepoUpgradeCard(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if _, err := repo.UpgradeCard(ctx, uid, "it_r1", "exp_card", 1, cost); err == nil {
+			if _, err := repo.ApplyCardChange(ctx, uid, "it_r1", plan); err == nil {
 				mu.Lock()
 				ok++
 				mu.Unlock()
@@ -509,7 +510,7 @@ func TestInventoryRepoUpgradeCard(t *testing.T) {
 	}
 	wg.Wait()
 	if ok != 1 {
-		t.Errorf("concurrent upgrades succeeded %d times, want 1", ok)
+		t.Errorf("concurrent changes succeeded %d times, want 1", ok)
 	}
 	if lvl := scalar[int](t, db, "SELECT level FROM player_cards WHERE uid = ?", uid); lvl != 3 {
 		t.Errorf("level = %d, want 3", lvl)
@@ -519,24 +520,96 @@ func TestInventoryRepoUpgradeCard(t *testing.T) {
 	}
 }
 
-func TestLevelExpRepoList(t *testing.T) {
-	db, _, _ := newSummonTestEnv(t)
-	t.Cleanup(func() { db.Exec("DELETE FROM level_exp WHERE kind = 'it_kind'") })
-	if err := db.Exec("INSERT INTO level_exp (kind, level, exp_required) VALUES ('it_kind', 2, 20), ('it_kind', 1, 10)").Error; err != nil {
-		t.Fatal(err)
+func TestInventoryRepoApplyCardChangeStageStarAndAtomicCosts(t *testing.T) {
+	db, _, uid := newSummonTestEnv(t)
+	repo := InitInventoryRepo(db)
+	ctx := context.Background()
+	exec := func(q string, args ...any) {
+		t.Helper()
+		if err := db.Exec(q, args...).Error; err != nil {
+			t.Fatal(err)
+		}
 	}
-	rows, err := InitLevelExpRepo(db).ListLevelExp(context.Background())
+	exec("INSERT INTO player_cards (uid, card_id) VALUES (?, 'it_sr1')", uid)
+	exec("INSERT INTO player_items (uid, item_id, quantity) VALUES (?, 'shard_sr', 100), (?, 'shard_r', 30)", uid, uid)
+
+	// 多項道具中有一項不足：整筆回滾，另一項不能被扣掉
+	both := func(inventory.CardState) (inventory.CardChange, error) {
+		return inventory.CardChange{Stars: 1, Stages: 1, Costs: []inventory.ItemCost{
+			{ItemId: "shard_sr", Quantity: 50}, {ItemId: "shard_r", Quantity: 50},
+		}}, nil
+	}
+	if _, err := repo.ApplyCardChange(ctx, uid, "it_sr1", both); !errors.Is(err, inventory.ErrNotEnoughItems) {
+		t.Fatalf("err = %v, want ErrNotEnoughItems", err)
+	}
+	if sr := scalar[int](t, db, "SELECT quantity FROM player_items WHERE uid = ? AND item_id = 'shard_sr'", uid); sr != 100 {
+		t.Errorf("shard_sr = %d; a failed change must roll back every deduction", sr)
+	}
+
+	exec("UPDATE player_items SET quantity = 60 WHERE uid = ? AND item_id = 'shard_r'", uid)
+	res, err := repo.ApplyCardChange(ctx, uid, "it_sr1", both)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var got []level.Row
-	for _, row := range rows {
-		if row.Kind == "it_kind" {
-			got = append(got, row)
+	if res.State.Star != 1 || res.State.Stage != 1 || res.Remaining["shard_sr"] != 50 || res.Remaining["shard_r"] != 10 {
+		t.Errorf("unexpected result: %+v", res)
+	}
+
+	cards, err := repo.ListCards(ctx, uid)
+	if err != nil || len(cards) != 1 || cards[0].Star != 1 || cards[0].Stage != 1 {
+		t.Errorf("ListCards must report star and stage: %+v, err %v", cards, err)
+	}
+
+	// plan 回傳的錯誤會讓整筆交易回滾，且道具與卡片都不變
+	failing := func(inventory.CardState) (inventory.CardChange, error) {
+		return inventory.CardChange{}, inventory.ErrStarMax
+	}
+	if _, err := repo.ApplyCardChange(ctx, uid, "it_sr1", failing); !errors.Is(err, inventory.ErrStarMax) {
+		t.Errorf("plan error err = %v", err)
+	}
+}
+
+func TestGrowthRepoLoad(t *testing.T) {
+	db, _, _ := newSummonTestEnv(t)
+	raw, err := InitGrowthRepo(db).LoadGrowth(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw.Stages) == 0 || len(raw.LevelExp) == 0 {
+		t.Skip("growth seed not applied")
+	}
+	cfg := growth.Build(raw)
+	if problems := cfg.Problems(); len(problems) != 0 {
+		t.Fatalf("seeded growth config must be valid: %v", problems)
+	}
+	card, err := cfg.Card()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if card.TopStage() != 4 || card.StageMaxLevel(0) != 30 || card.StarLevelCap(15) != 300 || card.MaxStar(constants.RarityR) != 5 || card.MaxLevel() != 300 {
+		t.Errorf("unexpected seeded card config: top %d, stage0 cap %d, star15 cap %d, max level %d",
+			card.TopStage(), card.StageMaxLevel(0), card.StarLevelCap(15), card.MaxLevel())
+	}
+	item, _, ok := card.AscendCost(0)
+	if !ok || item.ItemId != "ascend_pill" || item.Quantity != 500 || item.ItemName == "" {
+		t.Errorf("AscendCost(0) = %+v, %v", item, ok)
+	}
+	costs, ok := card.StarCost(constants.RarityUR, 2)
+	if !ok || len(costs) != 4 {
+		t.Fatalf("UR star 2 costs = %+v", costs)
+	}
+	got := map[string]int64{}
+	for _, c := range costs {
+		got[c.ItemId] = c.Quantity
+	}
+	want := map[string]int64{"shard_ur": 100, "shard_ssr": 150, "shard_sr": 200, "shard_r": 250}
+	for id, qty := range want {
+		if got[id] != qty {
+			t.Errorf("UR star 2 %s = %d, want %d", id, got[id], qty)
 		}
 	}
-	want := []level.Row{{Kind: "it_kind", Level: 1, ExpRequired: 10}, {Kind: "it_kind", Level: 2, ExpRequired: 20}}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("rows = %v, want %v", got, want)
+	player, err := cfg.Player()
+	if err != nil || player.MaxLevel() != 200 {
+		t.Errorf("seeded player table: %+v, err %v", player, err)
 	}
 }

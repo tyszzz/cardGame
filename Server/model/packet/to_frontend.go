@@ -78,9 +78,10 @@ type (
 
 	GetCardsResult struct {
 		BaseResult
-		MaxLevel int         `json:"maxLevel"`
-		ExpOwned int64       `json:"expOwned"` // 目前持有的卡片經驗道具數量
-		Cards    []OwnedCard `json:"cards"`
+		MaxLevel int              `json:"maxLevel"`
+		ExpOwned int64            `json:"expOwned"` // 目前持有的卡片經驗道具數量
+		Items    map[string]int64 `json:"items"`    // 背包道具數量（itemId -> 數量），供前端判斷進階與升星材料是否足夠
+		Cards    []OwnedCard      `json:"cards"`
 	}
 
 	OwnedCard struct {
@@ -89,14 +90,36 @@ type (
 		Rarity     constants.Rarity `json:"rarity"`
 		Race       constants.Race   `json:"race"`
 		Level      int32            `json:"level"`
+		Star       int              `json:"star"`
+		Stage      int              `json:"stage"`
+		MaxStar    int              `json:"maxStar"`
+		MaxLevel   int              `json:"maxLevel"` // 目前的等級上限（階與星數取較小）
+		LimitBy    string           `json:"limitBy"`  // 到達上限時的原因：stage（需進階）、star（需升星）、max（已滿）
 		IsLocked   bool             `json:"isLocked"`
 		ObtainedAt int64            `json:"obtainedAt"` // unix 秒
 		Attack     int              `json:"attack"`
 		Defense    int              `json:"defense"`
 		Health     int              `json:"health"`
-		NextExp    int64            `json:"nextExp"`   // 升到下一級所需經驗，已達上限為 0
-		NextExp10  int64            `json:"nextExp10"` // 連續升 10 級所需的總經驗，等級不足 10 級可升時為 0
+		NextExp    int64            `json:"nextExp"`          // 升到下一級所需經驗，已達上限為 0
+		NextExp10  int64            `json:"nextExp10"`        // 連續升 Levels10 級所需的總經驗，無法升級時為 0
+		Levels10   int              `json:"levels10"`         // 「升 10 級」實際會升的級數（受等級上限截斷）
+		CanAscend  bool             `json:"canAscend"`        // 等級已到當前階的上限且還有下一階，可以進階
+		Ascend     *AscendCost      `json:"ascend,omitempty"` // 進階所需材料，已是最高階時沒有
+		StarUp     []CostItem       `json:"starUp,omitempty"` // 升星所需材料，已達星數上限時沒有
 		Skills     []CardSkill      `json:"skills"`
+	}
+
+	// CostItem 為一項道具消耗
+	CostItem struct {
+		ItemId   string `json:"itemId"`
+		ItemName string `json:"itemName"`
+		Quantity int64  `json:"quantity"`
+	}
+
+	// AscendCost 為進階所需材料：經驗道具數量與進階道具；進階還需要等級已到當前階的上限
+	AscendCost struct {
+		Exp   int64      `json:"exp"`
+		Items []CostItem `json:"items"`
 	}
 
 	// CardSkill 為卡片技能的顯示資料，type 為 normalAtk、activeSkill、passiveSkill 或 talent
@@ -113,11 +136,31 @@ type (
 		BaseResult
 		CardId       string `json:"cardId"`
 		Level        int32  `json:"level"`
+		Levels       int    `json:"levels"` // 這次實際升的級數（受等級上限截斷）
+		Star         int    `json:"star"`
+		Stage        int    `json:"stage"`
+		MaxLevel     int    `json:"maxLevel"`
+		LimitBy      string `json:"limitBy"`
 		Attack       int    `json:"attack"`
 		Defense      int    `json:"defense"`
 		Health       int    `json:"health"`
 		NextExp      int64  `json:"nextExp"`      // 升到下一級所需經驗，已達上限為 0
-		NextExp10    int64  `json:"nextExp10"`    // 連續升 10 級所需的總經驗，等級不足 10 級可升時為 0
+		NextExp10    int64  `json:"nextExp10"`    // 連續升 Levels10 級所需的總經驗，無法升級時為 0
+		Levels10     int    `json:"levels10"`     // 「升 10 級」實際會升的級數
 		ExpRemaining int64  `json:"expRemaining"` // 升級後剩餘的經驗道具數量
+	}
+
+	// CardProgressResult 為進階與升星的結果
+	CardProgressResult struct {
+		BaseResult
+		CardId   string `json:"cardId"`
+		Level    int    `json:"level"`
+		Star     int    `json:"star"`
+		Stage    int    `json:"stage"`
+		MaxLevel int    `json:"maxLevel"`
+		LimitBy  string `json:"limitBy"`
+		Attack   int    `json:"attack"`
+		Defense  int    `json:"defense"`
+		Health   int    `json:"health"`
 	}
 )

@@ -106,6 +106,14 @@ export class PitayaClient {
     return this.request("CardHandler.GetCards", {});
   }
 
+  ascendCard(cardId) {
+    return this.request("CardHandler.AscendCard", { cardId });
+  }
+
+  starUpCard(cardId) {
+    return this.request("CardHandler.StarUpCard", { cardId });
+  }
+
   upgradeCard(cardId, levels = 1) {
     return this.request("CardHandler.UpgradeCard", { cardId, levels });
   }
