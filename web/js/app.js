@@ -15,7 +15,14 @@ const UPGRADE_RESULT_MESSAGES = {
   12: "已達等級上限",
   13: "經驗道具不足",
   14: "伺服器升級失敗",
+  15: "已到當前階的等級上限，需要先進階",
+  16: "已到當前星數的等級上限，需要先升星",
+  17: "等級要到當前階的上限才能進階",
+  18: "已經是最高階",
+  19: "已達星數上限",
+  20: "材料不足",
 };
+const EXP_ITEM_ID = "exp_card";
 const CURRENCY_LABELS = [
   ["coin", "金幣"],
   ["diamond", "鑽石"],
@@ -243,6 +250,7 @@ async function refreshBackpack() {
 // 目前持有的卡片（依 cardId 索引）與詳細畫面正在顯示的卡片
 const ownedCards = new Map();
 let expOwned = 0; // 目前持有的卡片經驗道具數量
+let ownedItems = {}; // 背包道具數量（itemId -> 數量），用來判斷進階與升星材料是否足夠
 const UPGRADE_BATCH_LEVELS = 10;
 let detailCardId = null;
 const SKILL_TYPE_LABELS = { normalAtk: "普攻", activeSkill: "主動", passiveSkill: "被動", talent: "天賦" };
@@ -294,30 +302,69 @@ function showCardDetail(cardId) {
   renderCardDetail();
 }
 
-// 持有的經驗足夠一次升 10 級時，按鈕改為升 10 級；回傳這次按鈕會升的等級數
+// 持有的經驗足夠一次升 10 級（受等級上限截斷後超過 1 級）時，按鈕改為升 10 級；回傳要送給後端的 levels（1 或 10）
 function upgradeLevelsFor(card) {
-  return card.nextExp10 > 0 && expOwned >= card.nextExp10 ? UPGRADE_BATCH_LEVELS : 1;
+  return card.levels10 > 1 && expOwned >= card.nextExp10 ? UPGRADE_BATCH_LEVELS : 1;
 }
+
+const LIMIT_BY_TEXT = { stage: "已到階上限，請先進階", star: "已到星數上限，請先升星", max: "已滿級" };
 
 function renderUpgradeCost(card) {
   const cost = $("upgrade-exp");
   const button = $("detail-upgrade");
   if (card.nextExp === 0) {
-    cost.textContent = "";
+    cost.textContent = LIMIT_BY_TEXT[card.limitBy] ?? "";
     cost.classList.remove("short");
-    button.textContent = "已滿級";
+    button.textContent = card.limitBy === "max" ? "已滿級" : "無法升級";
     return;
   }
   const levels = upgradeLevelsFor(card);
   const need = levels === 1 ? card.nextExp : card.nextExp10;
   cost.textContent = `所需經驗 ${need.toLocaleString()} / 持有經驗 ${expOwned.toLocaleString()}`;
   cost.classList.toggle("short", expOwned < need);
-  button.textContent = levels === 1 ? "升級" : `升 ${levels} 級`;
+  button.textContent = levels === 1 ? "升級" : `升 ${card.levels10} 級`;
+}
+
+// 材料清單轉成文字，並標示是否足夠
+function costText(items) {
+  return items.map((item) => `${item.itemName} ${item.quantity.toLocaleString()}（持有 ${(ownedItems[item.itemId] ?? 0).toLocaleString()}）`).join("、");
+}
+
+function hasItems(items) {
+  return items.every((item) => (ownedItems[item.itemId] ?? 0) >= item.quantity);
+}
+
+function renderProgress(card) {
+  const ascendInfo = $("ascend-info");
+  const ascendButton = $("detail-ascend");
+  if (!card.ascend) {
+    ascendInfo.textContent = `階 ${card.stage}（最高階）`;
+    ascendInfo.classList.remove("short");
+    ascendButton.disabled = true;
+  } else {
+    const items = [{ itemId: EXP_ITEM_ID, itemName: "經驗", quantity: card.ascend.exp }, ...card.ascend.items];
+    ascendInfo.textContent = `進階 ${card.stage} → ${card.stage + 1}：${costText(items)}${card.canAscend ? "" : "　（需先升到階上限）"}`;
+    ascendInfo.classList.toggle("short", card.canAscend && !hasItems(items));
+    ascendButton.disabled = busy || !card.canAscend || !hasItems(items);
+  }
+
+  const starInfo = $("star-info");
+  const starButton = $("detail-starup");
+  if (!card.starUp) {
+    starInfo.textContent = `${card.star} 星（已達上限）`;
+    starInfo.classList.remove("short");
+    starButton.disabled = true;
+  } else {
+    starInfo.textContent = `升星 ${card.star} → ${card.star + 1}：${costText(card.starUp)}`;
+    starInfo.classList.toggle("short", !hasItems(card.starUp));
+    starButton.disabled = busy || !hasItems(card.starUp);
+  }
 }
 
 function updateUpgradeButton() {
   const card = ownedCards.get(detailCardId);
   $("detail-upgrade").disabled = busy || !card || card.nextExp === 0;
+  if (card) renderProgress(card);
 }
 
 function renderCardDetail() {
@@ -328,7 +375,7 @@ function renderCardDetail() {
   rarity.textContent = card.rarity;
   rarity.className = `rarity ${card.rarity ?? ""}`;
   $("detail-name").textContent = card.cardName;
-  $("detail-meta").textContent = `${card.race}　Lv.${card.level}${card.isLocked ? "　已鎖定" : ""}`;
+  $("detail-meta").textContent = `${card.race}　Lv.${card.level}/${card.maxLevel}　${card.star} 星　${card.stage} 階${card.isLocked ? "　已鎖定" : ""}`;
   $("detail-attack").textContent = card.attack.toLocaleString();
   $("detail-defense").textContent = card.defense.toLocaleString();
   $("detail-health").textContent = card.health.toLocaleString();
@@ -338,12 +385,9 @@ function renderCardDetail() {
   renderSkills(card);
 }
 
-// 尚未有星數系統，所有卡片暫視為 1 星；之後後端回傳 star 時改用真實值
-const CARD_STAR = 1;
-
 function skillUnlockText(skill, card) {
   const conditions = [];
-  if (skill.unlockStar > CARD_STAR) conditions.push(`${skill.unlockStar} 星`);
+  if (skill.unlockStar > card.star) conditions.push(`${skill.unlockStar} 星`);
   if (skill.unlockLevel > card.level) conditions.push(`Lv.${skill.unlockLevel}`);
   return conditions.length ? { unlocked: false, text: `需 ${conditions.join("、")}` } : { unlocked: true, text: "已解鎖" };
 }
@@ -414,6 +458,7 @@ async function refreshOwnedCards() {
     const result = await spaced(() => client.getCards());
     ownedCards.clear();
     expOwned = result.expOwned ?? 0;
+    ownedItems = result.items ?? {};
     for (const card of result.cards ?? []) ownedCards.set(card.cardId, card);
     renderCardList();
     if (detailCardId !== null) renderCardDetail();
@@ -443,11 +488,15 @@ async function upgradeCard() {
         health: result.health,
         nextExp: result.nextExp,
         nextExp10: result.nextExp10,
+        levels10: result.levels10,
+        maxLevel: result.maxLevel,
+        limitBy: result.limitBy,
       });
       expOwned = result.expRemaining;
+      ownedItems[EXP_ITEM_ID] = result.expRemaining;
       loadedTabs.delete("backpack");
       renderCardList();
-      setStatus("upgrade-status", `升級成功：Lv.${result.level}（+${levels}）`);
+      setStatus("upgrade-status", `升級成功：Lv.${result.level}（+${result.levels}）`);
     }
   } catch (error) {
     setStatus("upgrade-status", `升級失敗：${error.message}`, true);
@@ -457,6 +506,35 @@ async function upgradeCard() {
     if (detailCardId === cardId) renderCardDetail();
   }
 }
+
+// 進階與升星：成功後重新取得卡片，因為等級上限與升級費用都會改變，持有的材料也跟著變
+async function progressCard(action, label) {
+  const cardId = detailCardId;
+  if (busy || cardId === null) return;
+  busy = true;
+  setSummonButtons(true);
+  setStatus("upgrade-status", `${label}中...`);
+  try {
+    const result = await action(cardId);
+    const code = result?.resultCode ?? 0;
+    if (code !== 0) {
+      setStatus("upgrade-status", `${label}失敗：${UPGRADE_RESULT_MESSAGES[code] ?? `resultCode ${code}`}`, true);
+    } else {
+      loadedTabs.delete("backpack");
+      await refreshOwnedCards();
+      setStatus("upgrade-status", `${label}成功：${result.star} 星　${result.stage} 階　等級上限 ${result.maxLevel}`);
+    }
+  } catch (error) {
+    setStatus("upgrade-status", `${label}失敗：${error.message}`, true);
+  } finally {
+    busy = false;
+    setSummonButtons(false);
+    if (detailCardId === cardId) renderCardDetail();
+  }
+}
+
+const ascendCard = () => progressCard((cardId) => client.ascendCard(cardId), "進階");
+const starUpCard = () => progressCard((cardId) => client.starUpCard(cardId), "升星");
 
 // 登入後只取得玩家資訊；背包與卡片在點開頁簽時才查詢
 async function loadPlayerData() {
@@ -604,4 +682,6 @@ for (const button of document.querySelectorAll("[data-tab-button]")) {
 }
 $("card-detail-back").addEventListener("click", showCardList);
 $("detail-upgrade").addEventListener("click", upgradeCard);
+$("detail-ascend").addEventListener("click", ascendCard);
+$("detail-starup").addEventListener("click", starUpCard);
 window.addEventListener("beforeunload", () => client.close());

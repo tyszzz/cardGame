@@ -149,6 +149,19 @@ button.link:hover { color: var(--text); }
   border-radius: 8px;
   padding: 8px 12px;
 }
+.progress { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+.progress-row .short { color: var(--danger); }
 .card .tag {
   position: absolute;
   top: 8px;

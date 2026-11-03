@@ -1,4 +1,4 @@
-package level
+package growth
 
 import (
 	"errors"
@@ -7,8 +7,8 @@ import (
 )
 
 type (
-	// Row 為 level_exp 的一筆資料：Level 為目前等級，ExpRequired 為升到下一級所需經驗。
-	Row struct {
+	// LevelRow 為 level_exp 的一筆資料：Level 為目前等級，ExpRequired 為升到下一級所需經驗。
+	LevelRow struct {
 		Kind        string
 		Level       int
 		ExpRequired int64
@@ -25,17 +25,16 @@ const (
 	KindPlayer = "player"
 )
 
-var (
-	ErrInvalidTable     = errors.New("invalid level exp table")
-	ErrTableUnavailable = errors.New("level exp table unavailable")
-)
+var ErrInvalidTable = errors.New("invalid level exp table")
+
+// outer function
 
 // BuildTable 驗證並建立單一種類的經驗表：等級須從 1 連續、經驗大於 0 且嚴格遞增。
-func BuildTable(kind string, rows []Row) (*Table, error) {
+func BuildTable(kind string, rows []LevelRow) (*Table, error) {
 	if len(rows) == 0 {
 		return nil, fmt.Errorf("%w: %s has no rows", ErrInvalidTable, kind)
 	}
-	sorted := append([]Row(nil), rows...)
+	sorted := append([]LevelRow(nil), rows...)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Level < sorted[j].Level })
 
 	need := make([]int64, 0, len(sorted))
@@ -52,25 +51,6 @@ func BuildTable(kind string, rows []Row) (*Table, error) {
 		need = append(need, row.ExpRequired)
 	}
 	return &Table{need: need}, nil
-}
-
-// BuildTables 依 Kind 分組建立經驗表；不合法的種類會被略過，並在回傳的 error 中列出原因。
-func BuildTables(rows []Row) (map[string]*Table, error) {
-	byKind := make(map[string][]Row)
-	for _, row := range rows {
-		byKind[row.Kind] = append(byKind[row.Kind], row)
-	}
-	tables := make(map[string]*Table, len(byKind))
-	var errs []error
-	for kind, kindRows := range byKind {
-		table, err := BuildTable(kind, kindRows)
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-		tables[kind] = table
-	}
-	return tables, errors.Join(errs...)
 }
 
 // MaxLevel 為等級上限。

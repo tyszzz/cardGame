@@ -42,8 +42,8 @@ func NewModulesManager() *ModulesManager {
 		services.NewPlayerService(postgresRepo.InitPlayerRepo(db)),
 	)
 	// inventory
-	levelService := services.NewLevelService(postgresRepo.InitLevelExpRepo(db))
-	inventoryService := services.NewInventoryService(postgresRepo.InitInventoryRepo(db), levelService)
+	growthService := services.NewGrowthService(postgresRepo.InitGrowthRepo(db))
+	inventoryService := services.NewInventoryService(postgresRepo.InitInventoryRepo(db), growthService)
 	mm.backpackHandler = handler.NewBackpackHandler(inventoryService)
 	mm.cardHandler = handler.NewCardHandler(inventoryService)
 	return mm
