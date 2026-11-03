@@ -4,6 +4,7 @@ import (
 	"cardGame/feature/account"
 	"cardGame/feature/card"
 	"cardGame/feature/inventory"
+	"cardGame/feature/level"
 	"cardGame/feature/player"
 	"cardGame/feature/summon"
 	"cardGame/model/constants"
@@ -468,14 +469,14 @@ func TestInventoryRepoUpgradeCard(t *testing.T) {
 	exec("UPDATE cards SET base_config = ? WHERE card_id = 'it_r1'", `{"attack":500,"attackRatio":1.2,"defense":100,"defenseRatio":1,"health":8000,"healthRatio":0.8}`)
 	exec("INSERT INTO player_cards (uid, card_id) VALUES (?, 'it_r1')", uid)
 
-	if _, err := repo.UpgradeCard(ctx, uid, "it_sr1", "exp_card", cost); !errors.Is(err, inventory.ErrCardNotOwned) {
+	if _, err := repo.UpgradeCard(ctx, uid, "it_sr1", "exp_card", 1, cost); !errors.Is(err, inventory.ErrCardNotOwned) {
 		t.Errorf("not owned err = %v", err)
 	}
-	if _, err := repo.UpgradeCard(ctx, uid, "it_r1", "exp_card", cost); !errors.Is(err, inventory.ErrNotEnoughExp) {
+	if _, err := repo.UpgradeCard(ctx, uid, "it_r1", "exp_card", 1, cost); !errors.Is(err, inventory.ErrNotEnoughExp) {
 		t.Errorf("no exp item err = %v", err)
 	}
 	exec("INSERT INTO player_items (uid, item_id, quantity) VALUES (?, 'exp_card', 99)", uid)
-	if _, err := repo.UpgradeCard(ctx, uid, "it_r1", "exp_card", cost); !errors.Is(err, inventory.ErrNotEnoughExp) {
+	if _, err := repo.UpgradeCard(ctx, uid, "it_r1", "exp_card", 1, cost); !errors.Is(err, inventory.ErrNotEnoughExp) {
 		t.Errorf("99 exp err = %v", err)
 	}
 	if lvl := scalar[int](t, db, "SELECT level FROM player_cards WHERE uid = ?", uid); lvl != 1 {
@@ -483,7 +484,7 @@ func TestInventoryRepoUpgradeCard(t *testing.T) {
 	}
 
 	exec("UPDATE player_items SET quantity = 250 WHERE uid = ? AND item_id = 'exp_card'", uid)
-	res, err := repo.UpgradeCard(ctx, uid, "it_r1", "exp_card", cost)
+	res, err := repo.UpgradeCard(ctx, uid, "it_r1", "exp_card", 1, cost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -499,7 +500,7 @@ func TestInventoryRepoUpgradeCard(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if _, err := repo.UpgradeCard(ctx, uid, "it_r1", "exp_card", cost); err == nil {
+			if _, err := repo.UpgradeCard(ctx, uid, "it_r1", "exp_card", 1, cost); err == nil {
 				mu.Lock()
 				ok++
 				mu.Unlock()
@@ -515,5 +516,27 @@ func TestInventoryRepoUpgradeCard(t *testing.T) {
 	}
 	if qty := scalar[int](t, db, "SELECT quantity FROM player_items WHERE uid = ? AND item_id = 'exp_card'", uid); qty != 50 {
 		t.Errorf("exp left = %d, want 50", qty)
+	}
+}
+
+func TestLevelExpRepoList(t *testing.T) {
+	db, _, _ := newSummonTestEnv(t)
+	t.Cleanup(func() { db.Exec("DELETE FROM level_exp WHERE kind = 'it_kind'") })
+	if err := db.Exec("INSERT INTO level_exp (kind, level, exp_required) VALUES ('it_kind', 2, 20), ('it_kind', 1, 10)").Error; err != nil {
+		t.Fatal(err)
+	}
+	rows, err := InitLevelExpRepo(db).ListLevelExp(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []level.Row
+	for _, row := range rows {
+		if row.Kind == "it_kind" {
+			got = append(got, row)
+		}
+	}
+	want := []level.Row{{Kind: "it_kind", Level: 1, ExpRequired: 10}, {Kind: "it_kind", Level: 2, ExpRequired: 20}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("rows = %v, want %v", got, want)
 	}
 }

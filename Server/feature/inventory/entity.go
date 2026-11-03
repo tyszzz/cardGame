@@ -42,15 +42,16 @@ type (
 	LevelCostFunc func(level int) (int64, error)
 
 	InventoryRepository interface {
-		// UpgradeCard 在同一個 transaction 內鎖定卡片、扣除經驗道具並升一級。
-		UpgradeCard(ctx context.Context, uid, cardId, expItemId string, cost LevelCostFunc) (*UpgradeResult, error)
+		// UpgradeCard 在同一個 transaction 內鎖定卡片、一次扣除升 levels 級所需的經驗道具並升級。
+		UpgradeCard(ctx context.Context, uid, cardId, expItemId string, levels int, cost LevelCostFunc) (*UpgradeResult, error)
 		ListItems(ctx context.Context, uid string) ([]BackpackItem, error)
 		ListCards(ctx context.Context, uid string) ([]OwnedCard, error)
 	}
 )
 
 var (
-	ErrCardNotOwned = errors.New("card not owned")
-	ErrCardMaxLevel = errors.New("card at max level")
-	ErrNotEnoughExp = errors.New("not enough exp items")
+	ErrCardNotOwned         = errors.New("card not owned")
+	ErrCardMaxLevel         = errors.New("card at max level")
+	ErrNotEnoughExp         = errors.New("not enough exp items")
+	ErrInvalidUpgradeLevels = errors.New("invalid upgrade levels")
 )

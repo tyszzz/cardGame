@@ -3,18 +3,27 @@ package services
 import (
 	"cardGame/feature/card"
 	"cardGame/feature/inventory"
+	"cardGame/feature/level"
 	"cardGame/model/cards"
 	"cardGame/model/constants"
 	"cardGame/model/packet"
 	"context"
 )
 
-type InventoryService struct {
-	repo inventory.InventoryRepository
-}
+type (
+	// CardLevelTables 提供卡片的升級經驗表。
+	CardLevelTables interface {
+		CardTable(ctx context.Context) (*level.Table, error)
+	}
 
-func NewInventoryService(repo inventory.InventoryRepository) *InventoryService {
-	return &InventoryService{repo: repo}
+	InventoryService struct {
+		repo   inventory.InventoryRepository
+		levels CardLevelTables
+	}
+)
+
+func NewInventoryService(repo inventory.InventoryRepository, levels CardLevelTables) *InventoryService {
+	return &InventoryService{repo: repo, levels: levels}
 }
 
 // inner function
@@ -42,13 +51,28 @@ func cardSkills(cfg cards.SkillConfig) []packet.CardSkill {
 	return skills
 }
 
-// upgradeCost 為升一級所需經驗，已達上限時回傳 ErrCardMaxLevel。
-func upgradeCost(level int) (int64, error) {
-	need := card.ExpToNext(level)
-	if need == 0 {
-		return 0, inventory.ErrCardMaxLevel
+// upgradeCost 回傳依經驗表計算升一級所需經驗的函式，已達上限時回傳 ErrCardMaxLevel。
+func upgradeCost(table *level.Table) inventory.LevelCostFunc {
+	return func(lv int) (int64, error) {
+		need := table.ExpToNext(lv)
+		if need == 0 {
+			return 0, inventory.ErrCardMaxLevel
+		}
+		return need, nil
 	}
-	return need, nil
+}
+
+// expForLevels 回傳從 lv 級連續升 n 級所需的總經驗；任何一級超過上限時回傳 0。
+func expForLevels(table *level.Table, lv, n int) int64 {
+	var total int64
+	for i := 0; i < n; i++ {
+		need := table.ExpToNext(lv + i)
+		if need == 0 {
+			return 0
+		}
+		total += need
+	}
+	return total
 }
 
 // outer function
@@ -76,11 +100,25 @@ func (s *InventoryService) GetBackpack(ctx context.Context, uid string) (*packet
 }
 
 func (s *InventoryService) GetCards(ctx context.Context, uid string) (*packet.GetCardsResult, error) {
+	table, err := s.levels.CardTable(ctx)
+	if err != nil {
+		return nil, err
+	}
 	cards, err := s.repo.ListCards(ctx, uid)
 	if err != nil {
 		return nil, err
 	}
-	result := &packet.GetCardsResult{MaxLevel: constants.CardMaxLevel, Cards: make([]packet.OwnedCard, 0, len(cards))}
+	items, err := s.repo.ListItems(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+	var expOwned int64
+	for _, it := range items {
+		if it.ItemId == constants.ItemIdCardExp {
+			expOwned = it.Quantity
+		}
+	}
+	result := &packet.GetCardsResult{MaxLevel: table.MaxLevel(), ExpOwned: expOwned, Cards: make([]packet.OwnedCard, 0, len(cards))}
 	for _, c := range cards {
 		result.Cards = append(result.Cards, packet.OwnedCard{
 			CardId:     c.CardId,
@@ -93,19 +131,31 @@ func (s *InventoryService) GetCards(ctx context.Context, uid string) (*packet.Ge
 			Attack:     card.StatAtLevel(c.Base.Attack, c.Base.AttackRatio, int(c.Level)),
 			Defense:    card.StatAtLevel(c.Base.Defense, c.Base.DefenseRatio, int(c.Level)),
 			Health:     card.StatAtLevel(c.Base.Health, c.Base.HealthRatio, int(c.Level)),
-			NextExp:    card.ExpToNext(int(c.Level)),
+			NextExp:    table.ExpToNext(int(c.Level)),
+			NextExp10:  expForLevels(table, int(c.Level), constants.CardUpgradeBatchLevels),
 			Skills:     cardSkills(c.Skill),
 		})
 	}
 	return result, nil
 }
 
-// UpgradeCard 消耗經驗道具將指定卡片升一級。
+// UpgradeCard 消耗經驗道具將指定卡片升 1 級或 10 級。
 func (s *InventoryService) UpgradeCard(ctx context.Context, uid string, data *packet.UpgradeCard) (*packet.UpgradeCardResult, error) {
 	if data == nil || data.CardId == "" {
 		return nil, inventory.ErrCardNotOwned
 	}
-	res, err := s.repo.UpgradeCard(ctx, uid, data.CardId, constants.ItemIdCardExp, upgradeCost)
+	levels := data.Levels
+	if levels == 0 {
+		levels = 1
+	}
+	if levels != 1 && levels != constants.CardUpgradeBatchLevels {
+		return nil, inventory.ErrInvalidUpgradeLevels
+	}
+	table, err := s.levels.CardTable(ctx)
+	if err != nil {
+		return nil, err
+	}
+	res, err := s.repo.UpgradeCard(ctx, uid, data.CardId, constants.ItemIdCardExp, levels, upgradeCost(table))
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +166,8 @@ func (s *InventoryService) UpgradeCard(ctx context.Context, uid string, data *pa
 		Attack:       card.StatAtLevel(res.Base.Attack, res.Base.AttackRatio, level),
 		Defense:      card.StatAtLevel(res.Base.Defense, res.Base.DefenseRatio, level),
 		Health:       card.StatAtLevel(res.Base.Health, res.Base.HealthRatio, level),
-		NextExp:      card.ExpToNext(level),
+		NextExp:      table.ExpToNext(level),
+		NextExp10:    expForLevels(table, level, constants.CardUpgradeBatchLevels),
 		ExpRemaining: res.ExpRemaining,
 	}, nil
 }

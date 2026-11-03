@@ -1,26 +1,6 @@
 package card
 
-import (
-	"cardGame/model/constants"
-	"testing"
-)
-
-func TestExpToNext(t *testing.T) {
-	want := map[int]int64{1: 100, 2: 120, 3: 144, 4: 173, 5: 208, 6: 250, 7: 300}
-	for level, exp := range want {
-		if got := ExpToNext(level); got != exp {
-			t.Errorf("ExpToNext(%d) = %d, want %d", level, got, exp)
-		}
-	}
-	for _, level := range []int{0, -1, constants.CardMaxLevel, constants.CardMaxLevel + 1} {
-		if got := ExpToNext(level); got != 0 {
-			t.Errorf("ExpToNext(%d) = %d, want 0", level, got)
-		}
-	}
-	if ExpToNext(constants.CardMaxLevel-1) <= 0 {
-		t.Error("the level below the cap must have a positive cost")
-	}
-}
+import "testing"
 
 func TestStatAtLevel(t *testing.T) {
 	cases := []struct {

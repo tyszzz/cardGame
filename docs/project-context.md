@@ -178,6 +178,9 @@ PGPASSWORD=... psql -h 127.0.0.1 -p 5433 -U tyszzz -d tyszzz -f migration/000001
 - 抽卡流程：service 驗證卡池後，repository 在單一 transaction 內鎖定玩家 → 扣款 → 讀取已擁有的卡與保底狀態 → 抽卡與判定 → 寫入卡片、碎片與保底；任何一步失敗整筆回滾。抽卡在 transaction 內執行，同一玩家的所有抽卡（不論貨幣與卡池）都會排隊。
 - 玩家對每張卡最多持有一張（`player_cards` 有 `UNIQUE (uid, card_id)`）；抽到重複的卡改給碎片放入背包：R 30、SR 30、SSR 10、UR 5。無卡片容量限制。
 - 卡池與卡片資料於 server 載入記憶體，每 5 分鐘重新載入（失敗時沿用舊資料並每 30 秒重試）；定義不合法的卡池（例如某稀有度沒有卡）會被略過並記錄警告，抽該池回傳 code 9。部署新版 server 前須先套用 migration 與 seed。
+- 卡片升級（`CardHandler.UpgradeCard`，請求帶 `levels` 為 1 或 10，省略視為 1；10 級的總費用由後端逐級累加並在同一個 transaction 內一次扣款，`GetCards` 回傳 `expOwned` 與每張卡的 `nextExp10` 供前端決定顯示「升級」或「升 10 級」）：消耗背包的經驗道具 `exp_card`（類型為素材），所需經驗取自 `level_exp` 表；repository 在 transaction 內鎖定卡片列 → 條件式扣除經驗道具 → 等級加 `levels`。每級屬性增加 `ceil(基礎值 × ratio)`（`feature/card.StatAtLevel`，`GetCards` 回傳依等級計算的三圍與 `nextExp`）。目前沒有經驗道具的產出來源，測試時直接改資料庫。
+- 升級經驗表 `level_exp(kind, level, exp_required)`：`level` 為目前等級、`exp_required` 為升到下一級所需，等級上限為該 `kind` 的最大 level + 1，所有稀有度共用同一張表。`kind` 有 `card`（上限 300）與 `player`（上限 200，玩家升級流程尚未實作，經驗需求暫填等級數字，可直接用 SQL 調整）。表由 `feature/level` 載入時驗證（等級從 1 連續、經驗大於 0、嚴格遞增），不合法的種類會被略過並記錄警告，相關功能回傳錯誤；`services.LevelService` 每 5 分鐘重新載入（失敗時沿用舊資料並每 30 秒重試）。
+- 卡片經驗曲線由 `go run ./cmd/levelseed <version>`（在 `Server/` 下）產生 `database/seed/<version>/level_exp_card.sql`，不要手改；玩家的 `level_exp_player.sql` 為手寫。曲線規則（常數與各段成長率在 `cmd/levelseed/main.go`）：1 級升 2 級需要 1,000；前 100 列（1~100 級）分四段（1~30、30~50、50~80、80~100），每段以固定比例成長且成長率逐段遞減（約 1.074、1.060、1.045、1.030），整體縮放到 91~100 合計 150 萬（前 100 列總和約 464 萬）；101 級起每級乘同一個比例（約 1.0144，每 10 級約 1.154 倍），解到 1~299 列總和約 2 億（101~110 約 185 萬、299 級升 300 級約 295 萬）。每一級都比上一級多，100 與 101 級銜接平滑，沒有跳升。區間以 10 列為一組（1~10、11~20…），最後一組 291~299 只有 9 列。要調整曲線時修改常數後重新產生並套用 seed。
 
 ## Logger
 

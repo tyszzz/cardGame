@@ -242,6 +242,8 @@ async function refreshBackpack() {
 
 // 目前持有的卡片（依 cardId 索引）與詳細畫面正在顯示的卡片
 const ownedCards = new Map();
+let expOwned = 0; // 目前持有的卡片經驗道具數量
+const UPGRADE_BATCH_LEVELS = 10;
 let detailCardId = null;
 const SKILL_TYPE_LABELS = { normalAtk: "普攻", activeSkill: "主動", passiveSkill: "被動", talent: "天賦" };
 
@@ -292,6 +294,27 @@ function showCardDetail(cardId) {
   renderCardDetail();
 }
 
+// 持有的經驗足夠一次升 10 級時，按鈕改為升 10 級；回傳這次按鈕會升的等級數
+function upgradeLevelsFor(card) {
+  return card.nextExp10 > 0 && expOwned >= card.nextExp10 ? UPGRADE_BATCH_LEVELS : 1;
+}
+
+function renderUpgradeCost(card) {
+  const cost = $("upgrade-exp");
+  const button = $("detail-upgrade");
+  if (card.nextExp === 0) {
+    cost.textContent = "";
+    cost.classList.remove("short");
+    button.textContent = "已滿級";
+    return;
+  }
+  const levels = upgradeLevelsFor(card);
+  const need = levels === 1 ? card.nextExp : card.nextExp10;
+  cost.textContent = `所需經驗 ${need.toLocaleString()} / 持有經驗 ${expOwned.toLocaleString()}`;
+  cost.classList.toggle("short", expOwned < need);
+  button.textContent = levels === 1 ? "升級" : `升 ${levels} 級`;
+}
+
 function updateUpgradeButton() {
   const card = ownedCards.get(detailCardId);
   $("detail-upgrade").disabled = busy || !card || card.nextExp === 0;
@@ -309,7 +332,7 @@ function renderCardDetail() {
   $("detail-attack").textContent = card.attack.toLocaleString();
   $("detail-defense").textContent = card.defense.toLocaleString();
   $("detail-health").textContent = card.health.toLocaleString();
-  $("detail-upgrade").textContent = card.nextExp === 0 ? "已滿級" : `升級（經驗 ${card.nextExp.toLocaleString()}）`;
+  renderUpgradeCost(card);
   updateUpgradeButton();
 
   renderSkills(card);
@@ -390,6 +413,7 @@ async function refreshOwnedCards() {
   try {
     const result = await spaced(() => client.getCards());
     ownedCards.clear();
+    expOwned = result.expOwned ?? 0;
     for (const card of result.cards ?? []) ownedCards.set(card.cardId, card);
     renderCardList();
     if (detailCardId !== null) renderCardDetail();
@@ -401,11 +425,12 @@ async function refreshOwnedCards() {
 async function upgradeCard() {
   const cardId = detailCardId;
   if (busy || cardId === null) return;
+  const levels = upgradeLevelsFor(ownedCards.get(cardId));
   busy = true;
   setSummonButtons(true);
   setStatus("upgrade-status", "升級中...");
   try {
-    const result = await client.upgradeCard(cardId);
+    const result = await client.upgradeCard(cardId, levels);
     const code = result?.resultCode ?? 0;
     if (code !== 0) {
       setStatus("upgrade-status", `升級失敗：${UPGRADE_RESULT_MESSAGES[code] ?? `resultCode ${code}`}`, true);
@@ -417,10 +442,12 @@ async function upgradeCard() {
         defense: result.defense,
         health: result.health,
         nextExp: result.nextExp,
+        nextExp10: result.nextExp10,
       });
+      expOwned = result.expRemaining;
       loadedTabs.delete("backpack");
       renderCardList();
-      setStatus("upgrade-status", `升級成功：Lv.${result.level}，剩餘經驗道具 ${result.expRemaining.toLocaleString()}`);
+      setStatus("upgrade-status", `升級成功：Lv.${result.level}（+${levels}）`);
     }
   } catch (error) {
     setStatus("upgrade-status", `升級失敗：${error.message}`, true);

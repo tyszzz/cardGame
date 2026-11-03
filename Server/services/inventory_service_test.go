@@ -2,6 +2,7 @@ package services
 
 import (
 	"cardGame/feature/inventory"
+	"cardGame/feature/level"
 	"cardGame/model/cards"
 	"cardGame/model/constants"
 	"cardGame/model/packet"
@@ -21,6 +22,7 @@ type fakeInventoryRepo struct {
 	upgradeRes   *inventory.UpgradeResult
 	gotExpItem   string
 	gotNeed      int64
+	gotLevels    int
 }
 
 func (f *fakeInventoryRepo) ListItems(context.Context, string) ([]inventory.BackpackItem, error) {
@@ -32,7 +34,7 @@ func (f *fakeInventoryRepo) ListCards(context.Context, string) ([]inventory.Owne
 }
 
 func TestInventoryServiceGetBackpack(t *testing.T) {
-	s := NewInventoryService(&fakeInventoryRepo{items: []inventory.BackpackItem{
+	s := newTestInventory(&fakeInventoryRepo{items: []inventory.BackpackItem{
 		{ItemId: "shard_r", ItemName: "R 碎片", ItemType: constants.ItemTypeShard, Rarity: constants.RarityR, Quantity: 60},
 		{ItemId: "shard_sr", ItemName: "SR 碎片", ItemType: constants.ItemTypeShard, Rarity: constants.RaritySR, Quantity: 30},
 	}})
@@ -49,7 +51,7 @@ func TestInventoryServiceGetBackpack(t *testing.T) {
 }
 
 func TestInventoryServiceEmpty(t *testing.T) {
-	s := NewInventoryService(&fakeInventoryRepo{})
+	s := newTestInventory(&fakeInventoryRepo{})
 	b, err := s.GetBackpack(context.Background(), "u1")
 	if err != nil || b.Used != 0 || b.Items == nil {
 		t.Errorf("backpack = %+v, err %v (items must be non-nil)", b, err)
@@ -62,7 +64,7 @@ func TestInventoryServiceEmpty(t *testing.T) {
 
 func TestInventoryServiceGetCards(t *testing.T) {
 	at := time.Unix(1700000000, 0)
-	s := NewInventoryService(&fakeInventoryRepo{cards: []inventory.OwnedCard{
+	s := newTestInventory(&fakeInventoryRepo{cards: []inventory.OwnedCard{
 		{CardId: "xian_mage_ur", CardName: "仙族UR法師", Rarity: constants.RarityUR, Race: constants.RaceXian, Level: 5, IsLocked: true, ObtainedAt: at},
 	}})
 	got, err := s.GetCards(context.Background(), "u1")
@@ -77,7 +79,7 @@ func TestInventoryServiceGetCards(t *testing.T) {
 
 func TestInventoryServiceError(t *testing.T) {
 	boom := errors.New("boom")
-	s := NewInventoryService(&fakeInventoryRepo{err: boom})
+	s := newTestInventory(&fakeInventoryRepo{err: boom})
 	if _, err := s.GetBackpack(context.Background(), "u1"); !errors.Is(err, boom) {
 		t.Errorf("GetBackpack err = %v", err)
 	}
@@ -86,29 +88,33 @@ func TestInventoryServiceError(t *testing.T) {
 	}
 }
 
-func (f *fakeInventoryRepo) UpgradeCard(_ context.Context, _, _, expItemId string, cost inventory.LevelCostFunc) (*inventory.UpgradeResult, error) {
+func (f *fakeInventoryRepo) UpgradeCard(_ context.Context, _, _, expItemId string, levels int, cost inventory.LevelCostFunc) (*inventory.UpgradeResult, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
-	need, err := cost(f.upgradeLevel)
-	if err != nil {
-		return nil, err
+	var need int64
+	for i := 0; i < levels; i++ {
+		next, err := cost(f.upgradeLevel + i)
+		if err != nil {
+			return nil, err
+		}
+		need += next
 	}
-	f.gotExpItem, f.gotNeed = expItemId, need
+	f.gotExpItem, f.gotNeed, f.gotLevels = expItemId, need, levels
 	return f.upgradeRes, nil
 }
 
 func TestInventoryServiceGetCardsStats(t *testing.T) {
 	base := cards.BaseConfig{Attack: 500, AttackRatio: 1.2, Defense: 100, DefenseRatio: 1, Health: 8000, HealthRatio: 0.8}
-	s := NewInventoryService(&fakeInventoryRepo{cards: []inventory.OwnedCard{
+	s := newTestInventory(&fakeInventoryRepo{cards: []inventory.OwnedCard{
 		{CardId: "a", Level: 2, Base: base},
-		{CardId: "b", Level: constants.CardMaxLevel, Base: base},
+		{CardId: "b", Level: testMaxLevel, Base: base},
 	}})
 	got, err := s.GetCards(context.Background(), "u1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.MaxLevel != constants.CardMaxLevel {
+	if got.MaxLevel != testMaxLevel {
 		t.Errorf("MaxLevel = %d", got.MaxLevel)
 	}
 	a := got.Cards[0]
@@ -127,7 +133,7 @@ func TestInventoryServiceGetCardsSkills(t *testing.T) {
 		PassiveSkill: cards.SkillDefinition{},
 		TalentSkill:  []cards.SkillDefinition{{Name: "天賦一", Desc: "t1", Unlock: &cards.UnlockRule{Star: 3}}, {Name: "天賦二", Desc: "t2", Unlock: &cards.UnlockRule{Level: 10}}},
 	}
-	s := NewInventoryService(&fakeInventoryRepo{cards: []inventory.OwnedCard{{CardId: "a", Level: 1, Skill: skill}}})
+	s := newTestInventory(&fakeInventoryRepo{cards: []inventory.OwnedCard{{CardId: "a", Level: 1, Skill: skill}}})
 	got, err := s.GetCards(context.Background(), "u1")
 	if err != nil {
 		t.Fatal(err)
@@ -151,7 +157,7 @@ func TestInventoryServiceGetCardsSkills(t *testing.T) {
 func TestInventoryServiceUpgradeCard(t *testing.T) {
 	base := cards.BaseConfig{Attack: 500, AttackRatio: 1.2, Defense: 100, DefenseRatio: 1, Health: 8000, HealthRatio: 0.8}
 	repo := &fakeInventoryRepo{upgradeLevel: 1, upgradeRes: &inventory.UpgradeResult{Level: 2, Base: base, ExpRemaining: 40}}
-	s := NewInventoryService(repo)
+	s := newTestInventory(repo)
 	got, err := s.UpgradeCard(context.Background(), "u1", &packet.UpgradeCard{CardId: "a"})
 	if err != nil {
 		t.Fatal(err)
@@ -164,8 +170,87 @@ func TestInventoryServiceUpgradeCard(t *testing.T) {
 	}
 }
 
+func TestInventoryServiceUpgradeCardInvalidLevels(t *testing.T) {
+	s := newTestInventory(&fakeInventoryRepo{upgradeLevel: 1})
+	for _, levels := range []int{-1, 2, 9, 11} {
+		if _, err := s.UpgradeCard(context.Background(), "u1", &packet.UpgradeCard{CardId: "a", Levels: levels}); !errors.Is(err, inventory.ErrInvalidUpgradeLevels) {
+			t.Errorf("levels %d err = %v", levels, err)
+		}
+	}
+}
+
+func TestInventoryServiceUpgradeCardBatchBeyondMax(t *testing.T) {
+	// 測試經驗表只有 4 級，從 1 級連升 10 級會超過上限
+	s := newTestInventory(&fakeInventoryRepo{upgradeLevel: 1})
+	if _, err := s.UpgradeCard(context.Background(), "u1", &packet.UpgradeCard{CardId: "a", Levels: 10}); !errors.Is(err, inventory.ErrCardMaxLevel) {
+		t.Errorf("err = %v", err)
+	}
+}
+
+func TestInventoryServiceUpgradeCardBatchCost(t *testing.T) {
+	table, err := level.BuildTable(level.KindCard, tenLevelRows())
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := cards.BaseConfig{Attack: 500, AttackRatio: 1.2}
+	repo := &fakeInventoryRepo{upgradeLevel: 1, upgradeRes: &inventory.UpgradeResult{Level: 11, Base: base, ExpRemaining: 5}}
+	s := NewInventoryService(repo, fakeCardLevels{table: table})
+	got, err := s.UpgradeCard(context.Background(), "u1", &packet.UpgradeCard{CardId: "a", Levels: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 1→2 到 10→11 依序 101~110，共 1055
+	if repo.gotLevels != 10 || repo.gotNeed != 1055 {
+		t.Errorf("levels = %d, need = %d", repo.gotLevels, repo.gotNeed)
+	}
+	if got.Level != 11 || got.ExpRemaining != 5 {
+		t.Errorf("unexpected result: %+v", got)
+	}
+}
+
+func TestInventoryServiceGetCardsExp(t *testing.T) {
+	table, err := level.BuildTable(level.KindCard, tenLevelRows())
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo := &fakeInventoryRepo{
+		items: []inventory.BackpackItem{{ItemId: constants.ItemIdCardExp, Quantity: 1500}},
+		cards: []inventory.OwnedCard{{CardId: "a", Level: 1}, {CardId: "b", Level: 2}},
+	}
+	got, err := NewInventoryService(repo, fakeCardLevels{table: table}).GetCards(context.Background(), "u1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ExpOwned != 1500 {
+		t.Errorf("ExpOwned = %d", got.ExpOwned)
+	}
+	// 1 級連升 10 級為 101~110，共 1055；2 級為 102~111，共 1065
+	if got.Cards[0].NextExp10 != 1055 || got.Cards[1].NextExp10 != 1065 {
+		t.Errorf("NextExp10 = %d, %d", got.Cards[0].NextExp10, got.Cards[1].NextExp10)
+	}
+
+	// 沒有經驗道具時 ExpOwned 為 0；接近上限時沒有 10 級的選項
+	repo = &fakeInventoryRepo{cards: []inventory.OwnedCard{{CardId: "c", Level: 15}}}
+	got, err = NewInventoryService(repo, fakeCardLevels{table: table}).GetCards(context.Background(), "u1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ExpOwned != 0 || got.Cards[0].NextExp != 115 || got.Cards[0].NextExp10 != 0 {
+		t.Errorf("unexpected result: %+v", got)
+	}
+}
+
+// tenLevelRows 為 1~19 級的經驗表，第 lv 級升級需要 100+lv 經驗（等級上限 20）。
+func tenLevelRows() []level.Row {
+	rows := make([]level.Row, 0, 19)
+	for lv := 1; lv <= 19; lv++ {
+		rows = append(rows, level.Row{Kind: level.KindCard, Level: lv, ExpRequired: int64(100 + lv)})
+	}
+	return rows
+}
+
 func TestInventoryServiceUpgradeCardRejects(t *testing.T) {
-	s := NewInventoryService(&fakeInventoryRepo{upgradeLevel: constants.CardMaxLevel})
+	s := newTestInventory(&fakeInventoryRepo{upgradeLevel: testMaxLevel})
 	if _, err := s.UpgradeCard(context.Background(), "u1", &packet.UpgradeCard{CardId: "a"}); !errors.Is(err, inventory.ErrCardMaxLevel) {
 		t.Errorf("max level err = %v", err)
 	}
@@ -174,4 +259,36 @@ func TestInventoryServiceUpgradeCardRejects(t *testing.T) {
 			t.Errorf("empty card id err = %v", err)
 		}
 	}
+}
+
+// 測試用經驗表：1→2 需要 100、2→3 需要 120、3→4 需要 144，等級上限 4。
+const testMaxLevel = 4
+
+type fakeCardLevels struct {
+	table *level.Table
+	err   error
+}
+
+func (f fakeCardLevels) CardTable(context.Context) (*level.Table, error) { return f.table, f.err }
+
+func TestInventoryServiceCardTableUnavailable(t *testing.T) {
+	s := NewInventoryService(&fakeInventoryRepo{}, fakeCardLevels{err: level.ErrTableUnavailable})
+	if _, err := s.GetCards(context.Background(), "u1"); !errors.Is(err, level.ErrTableUnavailable) {
+		t.Errorf("GetCards err = %v", err)
+	}
+	if _, err := s.UpgradeCard(context.Background(), "u1", &packet.UpgradeCard{CardId: "a"}); !errors.Is(err, level.ErrTableUnavailable) {
+		t.Errorf("UpgradeCard err = %v", err)
+	}
+}
+
+func newTestInventory(repo inventory.InventoryRepository) *InventoryService {
+	table, err := level.BuildTable(level.KindCard, []level.Row{
+		{Kind: level.KindCard, Level: 1, ExpRequired: 100},
+		{Kind: level.KindCard, Level: 2, ExpRequired: 120},
+		{Kind: level.KindCard, Level: 3, ExpRequired: 144},
+	})
+	if err != nil {
+		panic(err)
+	}
+	return NewInventoryService(repo, fakeCardLevels{table: table})
 }

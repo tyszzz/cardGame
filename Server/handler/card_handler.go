@@ -50,7 +50,7 @@ func (h *CardHandler) GetCards(ctx context.Context, _ *packet.Empty) (*packet.Ge
 	return result, nil
 }
 
-// UpgradeCard 消耗經驗道具將卡片升一級，uid 以登入後綁定的 session 為準。
+// UpgradeCard 消耗經驗道具將卡片升 1 級或 10 級，uid 以登入後綁定的 session 為準。
 func (h *CardHandler) UpgradeCard(ctx context.Context, data *packet.UpgradeCard) (*packet.UpgradeCardResult, error) {
 	uid := utils.GetSessionFromCtx(ctx).UID()
 	if uid == "" {
@@ -62,7 +62,7 @@ func (h *CardHandler) UpgradeCard(ctx context.Context, data *packet.UpgradeCard)
 		utils.Log().Warnf("UserUid: %s, UpgradeCard failed, err: %v", uid, err)
 		resultCode := int32(constants.CardUpgradeFailed)
 		switch {
-		case errors.Is(err, inventory.ErrCardNotOwned):
+		case errors.Is(err, inventory.ErrCardNotOwned), errors.Is(err, inventory.ErrInvalidUpgradeLevels):
 			resultCode = constants.CardUpgradeInvalidRequest
 		case errors.Is(err, inventory.ErrCardMaxLevel):
 			resultCode = constants.CardUpgradeMaxLevel

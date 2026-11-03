@@ -106,8 +106,8 @@ export class PitayaClient {
     return this.request("CardHandler.GetCards", {});
   }
 
-  upgradeCard(cardId) {
-    return this.request("CardHandler.UpgradeCard", { cardId });
+  upgradeCard(cardId, levels = 1) {
+    return this.request("CardHandler.UpgradeCard", { cardId, levels });
   }
 
   publish(route, body) {

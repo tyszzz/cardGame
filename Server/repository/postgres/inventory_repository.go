@@ -103,6 +103,7 @@ func (r *InventoryRepo) ListCards(ctx context.Context, uid string) ([]inventory.
 func (r *InventoryRepo) UpgradeCard(
 	ctx context.Context,
 	uid, cardId, expItemId string,
+	levels int,
 	cost inventory.LevelCostFunc,
 ) (*inventory.UpgradeResult, error) {
 	var result inventory.UpgradeResult
@@ -117,9 +118,14 @@ func (r *InventoryRepo) UpgradeCard(
 			return inventory.ErrCardNotOwned
 		}
 
-		need, err := cost(int(level))
-		if err != nil {
-			return err
+		// 逐級累加費用，任何一級超過上限都整筆失敗
+		var need int64
+		for i := 0; i < levels; i++ {
+			next, err := cost(int(level) + i)
+			if err != nil {
+				return err
+			}
+			need += next
 		}
 
 		// 條件式更新原子地檢查經驗道具數量
@@ -135,8 +141,8 @@ func (r *InventoryRepo) UpgradeCard(
 		}
 
 		if err := tx.Exec(
-			"UPDATE player_cards SET level = level + 1, updated_at = CURRENT_TIMESTAMP WHERE uid = ? AND card_id = ?",
-			uid, cardId,
+			"UPDATE player_cards SET level = level + ?, updated_at = CURRENT_TIMESTAMP WHERE uid = ? AND card_id = ?",
+			levels, uid, cardId,
 		).Error; err != nil {
 			return err
 		}

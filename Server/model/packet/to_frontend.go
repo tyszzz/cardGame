@@ -79,6 +79,7 @@ type (
 	GetCardsResult struct {
 		BaseResult
 		MaxLevel int         `json:"maxLevel"`
+		ExpOwned int64       `json:"expOwned"` // 目前持有的卡片經驗道具數量
 		Cards    []OwnedCard `json:"cards"`
 	}
 
@@ -93,7 +94,8 @@ type (
 		Attack     int              `json:"attack"`
 		Defense    int              `json:"defense"`
 		Health     int              `json:"health"`
-		NextExp    int64            `json:"nextExp"` // 升到下一級所需經驗，已達上限為 0
+		NextExp    int64            `json:"nextExp"`   // 升到下一級所需經驗，已達上限為 0
+		NextExp10  int64            `json:"nextExp10"` // 連續升 10 級所需的總經驗，等級不足 10 級可升時為 0
 		Skills     []CardSkill      `json:"skills"`
 	}
 
@@ -115,6 +117,7 @@ type (
 		Defense      int    `json:"defense"`
 		Health       int    `json:"health"`
 		NextExp      int64  `json:"nextExp"`      // 升到下一級所需經驗，已達上限為 0
+		NextExp10    int64  `json:"nextExp10"`    // 連續升 10 級所需的總經驗，等級不足 10 級可升時為 0
 		ExpRemaining int64  `json:"expRemaining"` // 升級後剩餘的經驗道具數量
 	}
 )
