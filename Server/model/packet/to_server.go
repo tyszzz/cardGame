@@ -22,5 +22,5 @@ type (
 	}
 )
 
-// GetCurrencies 不需要參數，玩家以 session 為準
-type GetCurrencies struct{}
+// 查詢玩家資料、背包、卡片皆不需要參數，玩家以 session 為準
+type Empty struct{}

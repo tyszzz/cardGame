@@ -397,18 +397,53 @@ func TestApplySummonPityConcurrent(t *testing.T) {
 	}
 }
 
-func TestPlayerRepoGetCurrencies(t *testing.T) {
+func TestPlayerRepoGetPlayer(t *testing.T) {
 	db, _, uid := newSummonTestEnv(t)
 	setCoin(t, db, uid, 1234)
-	got, err := InitPlayerRepo(db).GetCurrencies(context.Background(), uid)
+	repo := InitPlayerRepo(db)
+	got, err := repo.GetPlayer(context.Background(), uid)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got[constants.CurrencyCoin] != 1234 {
-		t.Errorf("coin = %d, want 1234", got[constants.CurrencyCoin])
+	if got.UID != uid || got.Level != 1 || got.Currencies[constants.CurrencyCoin] != 1234 {
+		t.Errorf("unexpected player: %+v", got)
 	}
-	empty, err := InitPlayerRepo(db).GetCurrencies(context.Background(), uuid.NewString())
-	if err != nil || len(empty) != 0 {
-		t.Errorf("unknown uid: got %v, err %v", empty, err)
+	if _, err := repo.GetPlayer(context.Background(), uuid.NewString()); !errors.Is(err, player.ErrPlayerNotFound) {
+		t.Errorf("unknown uid err = %v, want ErrPlayerNotFound", err)
+	}
+}
+
+func TestInventoryRepoLists(t *testing.T) {
+	db, _, uid := newSummonTestEnv(t)
+	repo := InitInventoryRepo(db)
+	ctx := context.Background()
+
+	items, err := repo.ListItems(ctx, uid)
+	if err != nil || len(items) != 0 {
+		t.Fatalf("empty backpack: %v, err %v", items, err)
+	}
+	cards, err := repo.ListCards(ctx, uid)
+	if err != nil || len(cards) != 0 {
+		t.Fatalf("empty cards: %v, err %v", cards, err)
+	}
+
+	for _, stmt := range []string{
+		"INSERT INTO player_cards (uid, card_id) VALUES (?, 'it_r1'), (?, 'it_sr1')",
+		"INSERT INTO player_items (uid, item_id, quantity) VALUES (?, 'shard_sr', 7), (?, 'shard_r', 0)",
+	} {
+		if err := db.Exec(stmt, uid, uid).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	cards, err = repo.ListCards(ctx, uid)
+	if err != nil || len(cards) != 2 {
+		t.Fatalf("cards: %v, err %v", cards, err)
+	}
+	if cards[0].CardId != "it_sr1" || cards[0].Rarity != constants.RaritySR || cards[0].CardName != "IT SR1" || cards[0].Level != 1 {
+		t.Errorf("cards must be ordered by rarity desc with definition fields: %+v", cards)
+	}
+	items, err = repo.ListItems(ctx, uid)
+	if err != nil || len(items) != 1 || items[0].ItemId != "shard_sr" || items[0].Quantity != 7 || items[0].ItemType != constants.ItemTypeShard {
+		t.Errorf("items (zero quantity hidden): %v, err %v", items, err)
 	}
 }

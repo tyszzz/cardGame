@@ -51,18 +51,38 @@
         <button id="logout-button" class="link" type="button">登出</button>
       </header>
 
-      <section class="panel">
-        <h2>召喚</h2>
-        <div id="pools" class="pools"></div>
-        <p id="game-status" class="status" role="status"></p>
-      </section>
+      <div class="tab-content">
+        <section id="backpack-panel" class="panel" data-tab="backpack" hidden>
+          <h2 id="backpack-title">背包</h2>
+          <div id="backpack-list" class="list"></div>
+        </section>
 
-      <section class="panel">
-        <h2>結果</h2>
-        <div id="cards" class="cards"></div>
-        <p id="pity" class="muted"></p>
-        <pre id="log" class="log"></pre>
-      </section>
+        <section id="owned-cards-panel" class="panel" data-tab="cards" hidden>
+          <h2 id="owned-cards-title">卡片</h2>
+          <div id="owned-cards" class="cards"></div>
+        </section>
+
+        <div id="summon-panel" data-tab="summon" hidden>
+          <section class="panel">
+            <h2>召喚</h2>
+            <div id="pools" class="pools"></div>
+            <p id="game-status" class="status" role="status"></p>
+          </section>
+
+          <section class="panel">
+            <h2>結果</h2>
+            <div id="cards" class="cards"></div>
+            <p id="pity" class="muted"></p>
+            <pre id="log" class="log"></pre>
+          </section>
+        </div>
+      </div>
+
+      <nav class="tabs" aria-label="主選單">
+        <button type="button" data-tab-button="backpack">背包</button>
+        <button type="button" data-tab-button="cards">卡片</button>
+        <button type="button" data-tab-button="summon">召喚</button>
+      </nav>
     </section>
   </main>
   <script type="module" src="js/app.js"></script>

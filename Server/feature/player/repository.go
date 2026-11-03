@@ -1,11 +1,13 @@
 package player
 
 import (
-	"cardGame/model/constants"
 	"context"
+	"errors"
 )
 
+var ErrPlayerNotFound = errors.New("player not found")
+
 type PlayerRepository interface {
-	// GetCurrencies 回傳玩家所有貨幣餘額，缺少的貨幣不會出現在結果中。
-	GetCurrencies(ctx context.Context, uid string) (map[constants.CurrencyType]int64, error)
+	// GetPlayer 回傳玩家基本資料與所有貨幣餘額，缺少的貨幣不會出現在 Currencies 中。
+	GetPlayer(ctx context.Context, uid string) (*Player, error)
 }

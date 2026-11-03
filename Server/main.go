@@ -25,5 +25,14 @@ func main() {
 		mm.GetPlayerHandler(),
 		component.WithName("PlayerHandler"),
 	)
+	app.Register(
+		mm.GetBackpackHandler(),
+		component.WithName("BackpackHandler"),
+	)
+
+	app.Register(
+		mm.GetCardHandler(),
+		component.WithName("CardHandler"),
+	)
 	app.Start()
 }

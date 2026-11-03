@@ -10,7 +10,7 @@ import (
 )
 
 type PlayerService interface {
-	GetCurrencies(ctx context.Context, uid string) (*packet.GetCurrenciesResult, error)
+	GetInfo(ctx context.Context, uid string) (*packet.GetInfoResult, error)
 }
 
 type PlayerHandler struct {
@@ -22,17 +22,17 @@ func NewPlayerHandler(ps PlayerService) *PlayerHandler {
 	return &PlayerHandler{ps: ps}
 }
 
-// GetCurrencies 回傳目前登入玩家的貨幣餘額，uid 以登入後綁定的 session 為準。
-func (h *PlayerHandler) GetCurrencies(ctx context.Context, _ *packet.GetCurrencies) (*packet.GetCurrenciesResult, error) {
+// GetInfo 回傳目前登入玩家的基本資料與貨幣，uid 以登入後綁定的 session 為準。
+func (h *PlayerHandler) GetInfo(ctx context.Context, _ *packet.Empty) (*packet.GetInfoResult, error) {
 	uid := utils.GetSessionFromCtx(ctx).UID()
 	if uid == "" {
-		utils.Log().Warnf("GetCurrencies rejected: session not logged in")
-		return &packet.GetCurrenciesResult{BaseResult: packet.BaseResult{ResultCode: constants.NotLoggedIn}}, nil
+		utils.Log().Warnf("GetInfo rejected: session not logged in")
+		return &packet.GetInfoResult{BaseResult: packet.BaseResult{ResultCode: constants.NotLoggedIn}}, nil
 	}
-	result, err := h.ps.GetCurrencies(ctx, uid)
+	result, err := h.ps.GetInfo(ctx, uid)
 	if err != nil {
-		utils.Log().Warnf("UserUid: %s, GetCurrencies failed, err: %v", uid, err)
-		return &packet.GetCurrenciesResult{BaseResult: packet.BaseResult{ResultCode: constants.PlayerQueryFailed}}, nil
+		utils.Log().Warnf("UserUid: %s, GetInfo failed, err: %v", uid, err)
+		return &packet.GetInfoResult{BaseResult: packet.BaseResult{ResultCode: constants.PlayerQueryFailed}}, nil
 	}
 	return result, nil
 }

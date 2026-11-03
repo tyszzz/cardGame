@@ -83,7 +83,7 @@ async function login(event) {
       return setStatus("login-status", `登入失敗：${JSON.stringify(result)}`, true);
     }
     setStatus("login-status", "");
-    enterGame(accountId, result);
+    await enterGame(accountId, result);
   } catch (error) {
     client.close();
     setStatus("login-status", `連線失敗：${error.message}`, true);
@@ -160,8 +160,10 @@ function setSummonButtons(disabled) {
   }
 }
 
-function enterGame(accountId, loginResult) {
+async function enterGame(accountId, loginResult) {
   $("account-name").textContent = accountId;
+  $("account-name").dataset.account = accountId;
+  resetTabs();
   $("cards").replaceChildren();
   $("pity").textContent = "";
   $("log").textContent = "";
@@ -169,14 +171,26 @@ function enterGame(accountId, loginResult) {
   buildPools();
   showView("game");
   appendLog(`Login: ${JSON.stringify(loginResult)}`);
-  refreshCurrencies();
+  setSummonButtons(true);
+  try {
+    await loadPlayerData();
+  } finally {
+    setSummonButtons(false);
+  }
 }
 
-async function refreshCurrencies() {
+// 每次查詢前先等待，避免連續請求被 server 的 rate limiter 丟棄
+async function spaced(call) {
   await sleep(REQUEST_INTERVAL_MS);
+  const result = await call();
+  if (result?.resultCode) throw new Error(`resultCode ${result.resultCode}`);
+  return result;
+}
+
+async function refreshInfo() {
   try {
-    const result = await client.getCurrencies();
-    if (result?.resultCode) throw new Error(`resultCode ${result.resultCode}`);
+    const result = await spaced(() => client.getInfo());
+    $("account-name").textContent = `${$("account-name").dataset.account}（${result.nickname}　Lv.${result.level}）`;
     const container = $("currencies");
     container.replaceChildren();
     for (const [key, label] of CURRENCY_LABELS) {
@@ -187,12 +201,108 @@ async function refreshCurrencies() {
       labelEl.textContent = label;
       const valueEl = document.createElement("div");
       valueEl.className = "value";
-      valueEl.textContent = (result?.[key] ?? 0).toLocaleString();
+      valueEl.textContent = (result.currencies?.[key] ?? 0).toLocaleString();
       item.append(labelEl, valueEl);
       container.append(item);
     }
   } catch (error) {
-    $("currencies").textContent = `貨幣查詢失敗：${error.message}`;
+    $("currencies").textContent = `玩家資訊查詢失敗：${error.message}`;
+  }
+}
+
+async function refreshBackpack() {
+  const list = $("backpack-list");
+  try {
+    const result = await spaced(() => client.getBackpack());
+    $("backpack-title").textContent = `背包（${result.used}/${result.capacity}）`;
+    list.replaceChildren();
+    if (!result.items?.length) list.textContent = "背包是空的";
+    for (const item of result.items ?? []) {
+      const row = document.createElement("div");
+      row.className = "list-row";
+      const name = document.createElement("span");
+      name.textContent = `[${item.rarity}] ${item.itemName}`;
+      const quantity = document.createElement("span");
+      quantity.textContent = `x${item.quantity.toLocaleString()}`;
+      row.append(name, quantity);
+      list.append(row);
+    }
+  } catch (error) {
+    list.textContent = `背包查詢失敗：${error.message}`;
+  }
+}
+
+async function refreshOwnedCards() {
+  const container = $("owned-cards");
+  try {
+    const result = await spaced(() => client.getCards());
+    $("owned-cards-title").textContent = `卡片（${result.cards?.length ?? 0}）`;
+    container.replaceChildren();
+    if (!result.cards?.length) container.textContent = "尚未擁有卡片";
+    (result.cards ?? []).forEach((card, index) => {
+      const element = document.createElement("div");
+      element.className = `card ${card.rarity ?? ""}`;
+      element.style.setProperty("--i", index);
+      const rarity = document.createElement("div");
+      rarity.className = "rarity";
+      rarity.textContent = card.rarity;
+      const name = document.createElement("div");
+      name.className = "name";
+      name.textContent = card.cardName;
+      const detail = document.createElement("div");
+      detail.className = "detail";
+      detail.textContent = `${card.race}　Lv.${card.level}${card.isLocked ? "　已鎖定" : ""}`;
+      element.append(rarity, name, detail);
+      container.append(element);
+    });
+  } catch (error) {
+    container.textContent = `卡片查詢失敗：${error.message}`;
+  }
+}
+
+// 登入後只取得玩家資訊；背包與卡片在點開頁簽時才查詢
+async function loadPlayerData() {
+  await refreshInfo();
+}
+
+// 頁簽 -> 內容面板；refresh 為點開時的查詢（召喚頁簽不需要）
+const TABS = {
+  backpack: { panel: "backpack-panel", refresh: refreshBackpack },
+  cards: { panel: "owned-cards-panel", refresh: refreshOwnedCards },
+  summon: { panel: "summon-panel", refresh: null },
+};
+let activeTab = null;
+// 已查詢且仍為最新的頁簽；召喚後背包與卡片會被移除，下次點開時重新查詢
+const loadedTabs = new Set();
+
+function resetTabs() {
+  activeTab = null;
+  loadedTabs.clear();
+  for (const { panel } of Object.values(TABS)) $(panel).hidden = true;
+  for (const button of document.querySelectorAll("[data-tab-button]")) {
+    button.classList.remove("active");
+  }
+}
+
+async function selectTab(name) {
+  if (busy || name === activeTab) return;
+  const tab = TABS[name];
+  const reload = tab.refresh && !loadedTabs.has(name);
+  activeTab = name;
+  for (const [key, { panel }] of Object.entries(TABS)) $(panel).hidden = key !== name;
+  for (const button of document.querySelectorAll("[data-tab-button]")) {
+    button.classList.toggle("active", button.dataset.tabButton === name);
+  }
+  if (!reload) return;
+
+  busy = true;
+  setSummonButtons(true);
+  try {
+    await tab.refresh();
+    loadedTabs.add(name);
+  } finally {
+    busy = false;
+    setSummonButtons(false);
   }
 }
 
@@ -211,8 +321,10 @@ async function summon(poolId, times) {
     } else {
       setStatus("game-status", "");
       showSummonResult(poolId, times, result);
+      loadedTabs.delete("backpack");
+      loadedTabs.delete("cards");
     }
-    await refreshCurrencies();
+    await refreshInfo();
   } catch (error) {
     setStatus("game-status", `召喚失敗：${error.message}`, true);
     appendLog(`Summon error: ${error.message}`);
@@ -287,4 +399,7 @@ $("register-form").addEventListener("submit", createAccount);
 $("to-register").addEventListener("click", () => showView("register"));
 $("to-login").addEventListener("click", () => showView("login"));
 $("logout-button").addEventListener("click", logout);
+for (const button of document.querySelectorAll("[data-tab-button]")) {
+  button.addEventListener("click", () => selectTab(button.dataset.tabButton));
+}
 window.addEventListener("beforeunload", () => client.close());

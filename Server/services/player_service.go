@@ -15,14 +15,19 @@ func NewPlayerService(repo player.PlayerRepository) *PlayerService {
 	return &PlayerService{repo: repo}
 }
 
-func (s *PlayerService) GetCurrencies(ctx context.Context, uid string) (*packet.GetCurrenciesResult, error) {
-	currencies, err := s.repo.GetCurrencies(ctx, uid)
+func (s *PlayerService) GetInfo(ctx context.Context, uid string) (*packet.GetInfoResult, error) {
+	p, err := s.repo.GetPlayer(ctx, uid)
 	if err != nil {
 		return nil, err
 	}
-	return &packet.GetCurrenciesResult{
-		Coin:        currencies[constants.CurrencyCoin],
-		Diamond:     currencies[constants.CurrencyDiamond],
-		FriendPoint: currencies[constants.CurrencyFriendPoint],
+	return &packet.GetInfoResult{
+		Nickname: p.Nickname,
+		Level:    p.Level,
+		VipLevel: p.VipLevel,
+		Currencies: packet.Currencies{
+			Coin:        p.Currencies[constants.CurrencyCoin],
+			Diamond:     p.Currencies[constants.CurrencyDiamond],
+			FriendPoint: p.Currencies[constants.CurrencyFriendPoint],
+		},
 	}, nil
 }

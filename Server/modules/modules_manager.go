@@ -8,9 +8,11 @@ import (
 )
 
 type ModulesManager struct {
-	accountHandler *handler.AccountHandler
-	summonHandler  *handler.SummonHandler
-	playerHandler  *handler.PlayerHandler
+	accountHandler  *handler.AccountHandler
+	summonHandler   *handler.SummonHandler
+	playerHandler   *handler.PlayerHandler
+	backpackHandler *handler.BackpackHandler
+	cardHandler     *handler.CardHandler
 }
 
 type ModulesFunc interface {
@@ -37,6 +39,10 @@ func NewModulesManager() *ModulesManager {
 	mm.playerHandler = handler.NewPlayerHandler(
 		services.NewPlayerService(postgresRepo.InitPlayerRepo(db)),
 	)
+	// inventory
+	inventoryService := services.NewInventoryService(postgresRepo.InitInventoryRepo(db))
+	mm.backpackHandler = handler.NewBackpackHandler(inventoryService)
+	mm.cardHandler = handler.NewCardHandler(inventoryService)
 	return mm
 }
 
@@ -50,4 +56,12 @@ func (mm *ModulesManager) GetAccountHandler() *handler.AccountHandler {
 
 func (mm *ModulesManager) GetPlayerHandler() *handler.PlayerHandler {
 	return mm.playerHandler
+}
+
+func (mm *ModulesManager) GetBackpackHandler() *handler.BackpackHandler {
+	return mm.backpackHandler
+}
+
+func (mm *ModulesManager) GetCardHandler() *handler.CardHandler {
+	return mm.cardHandler
 }

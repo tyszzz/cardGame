@@ -94,8 +94,16 @@ export class PitayaClient {
     return this.request("SummonHandler.SummonCard", { poolId, times });
   }
 
-  getCurrencies() {
-    return this.request("PlayerHandler.GetCurrencies", {});
+  getInfo() {
+    return this.request("PlayerHandler.GetInfo", {});
+  }
+
+  getBackpack() {
+    return this.request("BackpackHandler.GetBackpack", {});
+  }
+
+  getCards() {
+    return this.request("CardHandler.GetCards", {});
   }
 
   publish(route, body) {

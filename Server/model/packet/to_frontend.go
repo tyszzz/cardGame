@@ -52,10 +52,50 @@ type (
 
 // player packet
 type (
-	GetCurrenciesResult struct {
-		BaseResult
+	Currencies struct {
 		Coin        int64 `json:"coin"`
 		Diamond     int64 `json:"diamond"`
 		FriendPoint int64 `json:"friendPoint"`
+	}
+
+	GetInfoResult struct {
+		BaseResult
+		Nickname   string     `json:"nickname"`
+		Level      int32      `json:"level"`
+		VipLevel   int32      `json:"vipLevel"`
+		Currencies Currencies `json:"currencies"`
+	}
+)
+
+// inventory packet
+type (
+	GetBackpackResult struct {
+		BaseResult
+		Capacity int            `json:"capacity"` // 背包道具種類上限
+		Used     int            `json:"used"`     // 目前持有的道具種類數
+		Items    []BackpackItem `json:"items"`
+	}
+
+	BackpackItem struct {
+		ItemId   string             `json:"itemId"`
+		ItemName string             `json:"itemName"`
+		ItemType constants.ItemType `json:"itemType"`
+		Rarity   constants.Rarity   `json:"rarity"`
+		Quantity int64              `json:"quantity"`
+	}
+
+	GetCardsResult struct {
+		BaseResult
+		Cards []OwnedCard `json:"cards"`
+	}
+
+	OwnedCard struct {
+		CardId     string           `json:"cardId"`
+		CardName   string           `json:"cardName"`
+		Rarity     constants.Rarity `json:"rarity"`
+		Race       constants.Race   `json:"race"`
+		Level      int32            `json:"level"`
+		IsLocked   bool             `json:"isLocked"`
+		ObtainedAt int64            `json:"obtainedAt"` // unix 秒
 	}
 )

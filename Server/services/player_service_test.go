@@ -1,6 +1,7 @@
 package services
 
 import (
+	"cardGame/feature/player"
 	"cardGame/model/constants"
 	"context"
 	"errors"
@@ -8,32 +9,37 @@ import (
 )
 
 type fakePlayerRepo struct {
-	currencies map[constants.CurrencyType]int64
-	err        error
+	player *player.Player
+	err    error
 }
 
-func (f *fakePlayerRepo) GetCurrencies(context.Context, string) (map[constants.CurrencyType]int64, error) {
-	return f.currencies, f.err
+func (f *fakePlayerRepo) GetPlayer(context.Context, string) (*player.Player, error) {
+	return f.player, f.err
 }
 
-func TestPlayerServiceGetCurrencies(t *testing.T) {
-	s := NewPlayerService(&fakePlayerRepo{currencies: map[constants.CurrencyType]int64{
-		constants.CurrencyCoin:    5000,
-		constants.CurrencyDiamond: 30,
+func TestPlayerServiceGetInfo(t *testing.T) {
+	s := NewPlayerService(&fakePlayerRepo{player: &player.Player{
+		UID: "u1", Nickname: "tester", Level: 3, VipLevel: 1,
+		Currencies: map[constants.CurrencyType]int64{
+			constants.CurrencyCoin:    5000,
+			constants.CurrencyDiamond: 30,
+		},
 	}})
-	got, err := s.GetCurrencies(context.Background(), "u1")
+	got, err := s.GetInfo(context.Background(), "u1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Coin != 5000 || got.Diamond != 30 || got.FriendPoint != 0 {
-		t.Errorf("unexpected result: %+v", got)
+	if got.Nickname != "tester" || got.Level != 3 || got.VipLevel != 1 {
+		t.Errorf("unexpected profile: %+v", got)
+	}
+	if got.Currencies.Coin != 5000 || got.Currencies.Diamond != 30 || got.Currencies.FriendPoint != 0 {
+		t.Errorf("unexpected currencies: %+v", got.Currencies)
 	}
 }
 
-func TestPlayerServiceGetCurrenciesError(t *testing.T) {
-	boom := errors.New("boom")
-	s := NewPlayerService(&fakePlayerRepo{err: boom})
-	if _, err := s.GetCurrencies(context.Background(), "u1"); !errors.Is(err, boom) {
-		t.Errorf("err = %v, want %v", err, boom)
+func TestPlayerServiceGetInfoError(t *testing.T) {
+	s := NewPlayerService(&fakePlayerRepo{err: player.ErrPlayerNotFound})
+	if _, err := s.GetInfo(context.Background(), "u1"); !errors.Is(err, player.ErrPlayerNotFound) {
+		t.Errorf("err = %v, want ErrPlayerNotFound", err)
 	}
 }
