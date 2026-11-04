@@ -16,7 +16,7 @@ import (
 )
 
 type AccountService struct {
-	AccountRepo account.AccountRepository
+	accountRepo account.AccountRepository
 }
 
 var (
@@ -27,7 +27,7 @@ var (
 
 func NewAccountService(accountRepo account.AccountRepository) *AccountService {
 	return &AccountService{
-		AccountRepo: accountRepo,
+		accountRepo: accountRepo,
 	}
 }
 
@@ -108,7 +108,7 @@ func (s *AccountService) CreateNewAccount(ctx context.Context, data *packet.Crea
 		Status:       "active",
 	}
 
-	if err := s.AccountRepo.CreateNewAccount(ctx, account, newPlayer(uid, data.Nickname)); err != nil {
+	if err := s.accountRepo.CreateNewAccount(ctx, account, newPlayer(uid, data.Nickname)); err != nil {
 		return false, err
 	}
 
@@ -117,7 +117,7 @@ func (s *AccountService) CreateNewAccount(ctx context.Context, data *packet.Crea
 
 func (s *AccountService) Login(ctx context.Context, data *packet.Login) (bool, string, error) {
 	utils.Log().Infof("login accountId: %s", data.AccountId)
-	accountData, err := s.AccountRepo.GetAccountByAccountId(ctx, data.AccountId)
+	accountData, err := s.accountRepo.GetAccountByAccountId(ctx, data.AccountId)
 	if err != nil {
 		return false, "", err
 	}
@@ -131,7 +131,7 @@ func (s *AccountService) Login(ctx context.Context, data *packet.Login) (bool, s
 	}
 
 	// last_login_at 為統計資料，更新失敗不阻擋登入
-	if err := s.AccountRepo.UpdateLastLogin(ctx, accountData.AccountId, time.Now()); err != nil {
+	if err := s.accountRepo.UpdateLastLogin(ctx, accountData.AccountId, time.Now()); err != nil {
 		utils.Log().Warnf("update last login failed, accountId: %s, err: %v", data.AccountId, err)
 	}
 

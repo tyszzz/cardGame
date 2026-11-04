@@ -8,17 +8,17 @@ import (
 )
 
 type PlayerService struct {
-	repo player.PlayerRepository
+	playerRepo player.PlayerRepository
 }
 
-func NewPlayerService(repo player.PlayerRepository) *PlayerService {
-	return &PlayerService{repo: repo}
+func NewPlayerService(playerRepo player.PlayerRepository) *PlayerService {
+	return &PlayerService{playerRepo: playerRepo}
 }
 
 // outer function
 
 func (s *PlayerService) GetInfo(ctx context.Context, uid string) (*packet.GetInfoResult, error) {
-	p, err := s.repo.GetPlayer(ctx, uid)
+	p, err := s.playerRepo.GetPlayer(ctx, uid)
 	if err != nil {
 		return nil, err
 	}

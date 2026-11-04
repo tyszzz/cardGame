@@ -9,9 +9,9 @@ import (
 )
 
 type GrowthService struct {
-	repo growth.GrowthRepository
-	now  func() time.Time
-	warn func(format string, args ...any)
+	growthRepo growth.GrowthRepository
+	now        func() time.Time
+	warn       func(format string, args ...any)
 
 	mu       sync.Mutex
 	config   *growth.Config
@@ -23,11 +23,11 @@ const (
 	growthReloadRetryWait = 30 * time.Second // 重新載入失敗並沿用舊資料時，下次重試的等待時間
 )
 
-func NewGrowthService(repo growth.GrowthRepository) *GrowthService {
+func NewGrowthService(growthRepo growth.GrowthRepository) *GrowthService {
 	return &GrowthService{
-		repo: repo,
-		now:  time.Now,
-		warn: func(format string, args ...any) { utils.Log().Warnf(format, args...) },
+		growthRepo: growthRepo,
+		now:        time.Now,
+		warn:       func(format string, args ...any) { utils.Log().Warnf(format, args...) },
 	}
 }
 
@@ -36,7 +36,7 @@ func NewGrowthService(repo growth.GrowthRepository) *GrowthService {
 // load 從資料庫載入並驗證；不合法的部分記錄警告，並盡量沿用舊設定中合法的部分，
 // 避免一次錯誤的資料修改讓已經運作的功能停用。
 func (s *GrowthService) load(ctx context.Context) (*growth.Config, error) {
-	raw, err := s.repo.LoadGrowth(ctx)
+	raw, err := s.growthRepo.LoadGrowth(ctx)
 	if err != nil {
 		return nil, err
 	}

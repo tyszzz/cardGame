@@ -11,10 +11,10 @@ import (
 
 type (
 	SummonService struct {
-		repo summon.SummonRepository
-		rnd  summon.Rand
-		now  func() time.Time
-		warn func(format string, args ...any)
+		summonRepo summon.SummonRepository
+		rnd        summon.Rand
+		now        func() time.Time
+		warn       func(format string, args ...any)
 
 		poolMu   sync.Mutex
 		pools    map[string]*summon.Pool
@@ -27,12 +27,12 @@ const (
 	poolReloadRetryWait = 30 * time.Second // 重新載入失敗並沿用舊資料時，下次重試的等待時間
 )
 
-func NewSummonService(repo summon.SummonRepository) *SummonService {
+func NewSummonService(summonRepo summon.SummonRepository) *SummonService {
 	return &SummonService{
-		repo: repo,
-		rnd:  summon.DefaultRand,
-		now:  time.Now,
-		warn: func(format string, args ...any) { utils.Log().Warnf(format, args...) },
+		summonRepo: summonRepo,
+		rnd:        summon.DefaultRand,
+		now:        time.Now,
+		warn:       func(format string, args ...any) { utils.Log().Warnf(format, args...) },
 	}
 }
 
@@ -40,18 +40,18 @@ func NewSummonService(repo summon.SummonRepository) *SummonService {
 
 // loadPools 載入所有卡池並組裝；定義不合法的卡池會被略過並記錄警告，不影響其他卡池。
 func (s *SummonService) loadPools(ctx context.Context) (map[string]*summon.Pool, error) {
-	cards, err := s.repo.ListEnabledCards(ctx)
+	cards, err := s.summonRepo.ListEnabledCards(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defs, err := s.repo.ListPools(ctx)
+	defs, err := s.summonRepo.ListPools(ctx)
 	if err != nil {
 		if len(defs) == 0 {
 			return nil, err
 		}
 		s.warn("some summon pools skipped: %v", err)
 	}
-	refs, err := s.repo.ListPoolCards(ctx)
+	refs, err := s.summonRepo.ListPoolCards(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (s *SummonService) SummonCard(ctx context.Context, uid string, data *packet
 		return nil, err
 	}
 
-	outcome, err := s.repo.ApplySummon(ctx, uid, pool.PoolId, pool.Currency, cost, pool.TracksPity(),
+	outcome, err := s.summonRepo.ApplySummon(ctx, uid, pool.PoolId, pool.Currency, cost, pool.TracksPity(),
 		func(owned map[string]struct{}, pity summon.PityState) (summon.Outcome, error) {
 			return pool.Summon(data.Times, owned, pity, s.rnd)
 		})

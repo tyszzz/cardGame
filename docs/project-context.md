@@ -164,6 +164,16 @@ PGPASSWORD=... psql -h 127.0.0.1 -p 5433 -U tyszzz -d tyszzz -f migration/000001
 - 測試檔不適用。
 - 這個規定只管順序，不改變邏輯；新增程式碼時直接放在對應區塊，不要因此另外重構。
 
+## Service 命名規則
+
+`services` 內的 service 持有 repository 時：
+
+- 欄位與建構函式參數以「對應資料表／領域名稱 + `Repo`」命名，一律小寫（僅供 package 內使用），不要只叫 `repo`。例如 `AccountService.accountRepo`、`SummonService.summonRepo`、`PlayerService.playerRepo`、`GrowthService.growthRepo`、`InventoryService.inventoryRepo`。
+- 目的：之後單一 service 需要注入多個 repository 時名稱不會衝突，例如 `CardService` 日後可以同時有 `inventoryRepo` 與 `playerRepo`。
+- 建構函式簽名依此命名，例如 `NewCardService(inventoryRepo, growth)`；依賴的非 repository 物件（成長設定等）維持原本的名稱。
+- 範例：`services/account_service.go`、`services/card_service.go`。
+- 這個規定只管命名，新增程式碼時遵守即可，不要為了命名另外做無關的重構。
+
 ## 卡片、抽卡與怒氣規則
 
 - 卡片定義以 JSON 維護於 `database/seed/<version>/cards/*.json`（可用 `tools/card-editor.html` 產生），再以 `go run ./cmd/cardseed <version>`（在 `Server/` 下）轉成 `cards.sql`，由 `database/seed.sh` 匯入。`cardseed` 會驗證欄位、稀有度與技能規則。
