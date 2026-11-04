@@ -1,4 +1,5 @@
 import { PitayaClient } from "./pitaya_client.js";
+import { createBattleView } from "./battle_view.js";
 
 const SERVER_URL = `ws://${location.hostname || "127.0.0.1"}:8080/`;
 const RESULT_ACCOUNT_ALREADY_EXISTS = 3;
@@ -469,6 +470,8 @@ async function refreshOwnedCards() {
   }
 }
 
+const battleView = createBattleView({ client, spaced, ownedCards, loadCards: refreshOwnedCards });
+
 async function upgradeCard() {
   const cardId = detailCardId;
   if (busy || cardId === null) return;
@@ -548,6 +551,7 @@ const TABS = {
   backpack: { panel: "backpack-panel", refresh: refreshBackpack },
   cards: { panel: "owned-cards-panel", refresh: refreshOwnedCards },
   summon: { panel: "summon-panel", refresh: null },
+  battle: { panel: "battle-panel", refresh: () => battleView.refresh() },
 };
 let activeTab = null;
 // 已查詢且仍為最新的頁簽；召喚後背包與卡片會被移除，下次點開時重新查詢
@@ -555,8 +559,10 @@ const loadedTabs = new Set();
 
 function resetTabs() {
   activeTab = null;
+  $("game-view").dataset.tab = "";
   loadedTabs.clear();
   ownedCards.clear();
+  battleView.reset();
   showCardList();
   for (const { panel } of Object.values(TABS)) $(panel).hidden = true;
   for (const button of document.querySelectorAll("[data-tab-button]")) {
@@ -569,6 +575,7 @@ async function selectTab(name) {
   const tab = TABS[name];
   const reload = tab.refresh && !loadedTabs.has(name);
   activeTab = name;
+  $("game-view").dataset.tab = name;
   for (const [key, { panel }] of Object.entries(TABS)) $(panel).hidden = key !== name;
   for (const button of document.querySelectorAll("[data-tab-button]")) {
     button.classList.toggle("active", button.dataset.tabButton === name);

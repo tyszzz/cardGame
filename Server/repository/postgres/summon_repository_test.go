@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"cardGame/feature/account"
+	"cardGame/feature/battle"
 	"cardGame/feature/card"
 	"cardGame/feature/growth"
 	"cardGame/feature/inventory"
@@ -611,5 +612,45 @@ func TestGrowthRepoLoad(t *testing.T) {
 	player, err := cfg.Player()
 	if err != nil || player.MaxLevel() != 200 {
 		t.Errorf("seeded player table: %+v, err %v", player, err)
+	}
+}
+
+func TestLineupRepo(t *testing.T) {
+	db, _, uid := newSummonTestEnv(t)
+	repo := InitLineupRepo(db)
+	ctx := context.Background()
+
+	got, err := repo.GetLineup(ctx, uid)
+	if err != nil || len(got) != 0 {
+		t.Fatalf("empty lineup = %v, %v", got, err)
+	}
+
+	first := []battle.LineupSlot{{Position: 4, CardId: "it_sr1"}, {Position: 1, CardId: "it_r1"}}
+	if err := repo.SaveLineup(ctx, uid, first); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = repo.GetLineup(ctx, uid)
+	want := []battle.LineupSlot{{Position: 1, CardId: "it_r1"}, {Position: 4, CardId: "it_sr1"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("lineup = %v, want %v", got, want)
+	}
+
+	// 整批覆蓋：舊的位置不會殘留
+	if err := repo.SaveLineup(ctx, uid, []battle.LineupSlot{{Position: 2, CardId: "it_r1"}}); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = repo.GetLineup(ctx, uid)
+	if !reflect.DeepEqual(got, []battle.LineupSlot{{Position: 2, CardId: "it_r1"}}) {
+		t.Fatalf("overwritten lineup = %v", got)
+	}
+
+	// 違反唯一限制（同一張卡兩個位置）時整筆回滾，舊陣容保留
+	bad := []battle.LineupSlot{{Position: 1, CardId: "it_r1"}, {Position: 2, CardId: "it_r1"}}
+	if err := repo.SaveLineup(ctx, uid, bad); err == nil {
+		t.Fatal("duplicate card should fail")
+	}
+	got, _ = repo.GetLineup(ctx, uid)
+	if !reflect.DeepEqual(got, []battle.LineupSlot{{Position: 2, CardId: "it_r1"}}) {
+		t.Fatalf("failed save must roll back, lineup = %v", got)
 	}
 }

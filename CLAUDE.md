@@ -29,7 +29,7 @@ services -> feature
 
 其他目錄：
 
-- `web/`：`index.html`、`app.css`、`js/app.js`（UI）、`js/pitaya_client.js`、`js/pitaya_protocol.js`
+- `web/`：`index.html`、`app.css`、`js/app.js`（UI）、`js/battle_view.js`（戰鬥頁簽）、`js/pitaya_client.js`、`js/pitaya_protocol.js`
 - `database/`：`migration/`（版本化 SQL schema）、`seed/<version>/`（卡片定義）、`migration.sh`、`seed.sh`
 - `tools/card-editor.html`：產生卡片 JSON 的網頁
 - `docs/project-context.md`：專案背景與進度

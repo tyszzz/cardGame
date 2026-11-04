@@ -340,3 +340,24 @@ func TestCastSkipsDeadAndDoesNotReselect(t *testing.T) {
 		t.Fatalf("first cast events = %+v", firstCast)
 	}
 }
+
+func TestActionRageEventAndInitialSnapshot(t *testing.T) {
+	r, _ := Run(Input{
+		Ally:  []UnitInput{uin("a", 1, 10, 0, 1000)},
+		Enemy: []UnitInput{uin("e", 2, 1, 0, 1000)},
+	})
+	if len(r.Initial) != 2 || r.Initial[0].Ref != (Ref{TeamAlly, 1}) || r.Initial[1].Ref != (Ref{TeamEnemy, 2}) ||
+		r.Initial[0].Rage != constants.RageInitial || r.Initial[0].MaxHealth != 1000 {
+		t.Fatalf("initial = %+v", r.Initial)
+	}
+	// 我方行動：50 → 普攻 → 100；再行動：主動 → 0 → 50。
+	var remains []int
+	for _, e := range eventsOf(r, EventActionRage) {
+		if e.Actor.Team == TeamAlly {
+			remains = append(remains, e.Remain)
+		}
+	}
+	if len(remains) < 3 || remains[0] != 100 || remains[1] != 50 || remains[2] != 100 {
+		t.Fatalf("ally action rage = %v", remains)
+	}
+}

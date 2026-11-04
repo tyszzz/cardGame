@@ -36,5 +36,10 @@ func main() {
 		mm.GetCardHandler(),
 		component.WithName("CardHandler"),
 	)
+
+	app.Register(
+		mm.GetBattleHandler(),
+		component.WithName("BattleHandler"),
+	)
 	app.Start()
 }

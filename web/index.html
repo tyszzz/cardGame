@@ -41,7 +41,7 @@
       </form>
     </section>
 
-    <section id="game-view" class="view" hidden>
+    <section id="game-view" class="view" data-tab="" data-fight="" hidden>
       <header class="panel topbar">
         <div>
           <div class="muted">登入帳號</div>
@@ -110,10 +110,68 @@
         </div>
       </div>
 
+      <div id="battle-panel" data-tab="battle" hidden>
+        <section id="battle-stage-view" class="panel">
+          <h2>戰鬥</h2>
+          <div id="battle-stages" class="pools"></div>
+          <p id="battle-stage-status" class="status" role="status"></p>
+        </section>
+
+        <section id="battle-lineup-view" class="panel" hidden>
+          <button id="lineup-back" class="link" type="button">‹ 返回關卡列表</button>
+          <h2 id="lineup-title">陣容</h2>
+          <div class="lineup-field">
+            <div class="lineup-side">
+              <div class="lineup-col">
+                <div class="lineup-label">後排</div>
+                <div id="lineup-back-row" class="lineup-grid"></div>
+              </div>
+              <div class="lineup-col">
+                <div class="lineup-label">前排</div>
+                <div id="lineup-front" class="lineup-grid"></div>
+              </div>
+            </div>
+            <div class="vs">VS</div>
+            <div class="lineup-side">
+              <div class="lineup-col">
+                <div class="lineup-label">前排</div>
+                <div id="lineup-enemy-front" class="lineup-grid"></div>
+              </div>
+              <div class="lineup-col">
+                <div class="lineup-label">後排</div>
+                <div id="lineup-enemy-back" class="lineup-grid"></div>
+              </div>
+            </div>
+          </div>
+          <p class="muted lineup-hint">點選位置再點卡片放入；點卡片可移動或移出陣容。</p>
+          <div id="lineup-pool" class="pick-grid"></div>
+          <p id="lineup-status" class="status" role="status"></p>
+          <div class="lineup-actions">
+            <button id="lineup-save" type="button">儲存陣容</button>
+            <button id="lineup-start" class="primary" type="button">開始戰鬥</button>
+          </div>
+        </section>
+
+        <section id="battle-fight-view" class="fight" hidden>
+          <div id="battle-field" class="field"></div>
+          <div class="fight-mid">
+            <div class="fight-bar">
+              <strong id="battle-round">戰鬥準備中</strong>
+              <span>
+                <button id="battle-skip" type="button">跳過</button>
+                <button id="battle-exit" class="primary" type="button" hidden>返回</button>
+              </span>
+            </div>
+            <div id="battle-log" class="fight-log"></div>
+          </div>
+        </section>
+      </div>
+
       <nav class="tabs" aria-label="主選單">
         <button type="button" data-tab-button="backpack">背包</button>
         <button type="button" data-tab-button="cards">卡片</button>
         <button type="button" data-tab-button="summon">召喚</button>
+        <button type="button" data-tab-button="battle">戰鬥</button>
       </nav>
     </section>
   </main>

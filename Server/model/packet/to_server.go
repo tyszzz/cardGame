@@ -37,4 +37,20 @@ type (
 		CardId string `json:"cardId"`
 		Levels int    `json:"levels,omitempty"`
 	}
+
+	// LineupSlot 為陣容中的一格，位置 1~3 為前排、4~6 為後排
+	LineupSlot struct {
+		Position int    `json:"position"`
+		CardId   string `json:"cardId"`
+	}
+
+	// SaveLineup 整批覆蓋玩家的陣容
+	SaveLineup struct {
+		Slots []LineupSlot `json:"slots"`
+	}
+
+	// StartBattle 以玩家目前儲存的陣容挑戰指定關卡
+	StartBattle struct {
+		StageId string `json:"stageId"`
+	}
 )
