@@ -15,6 +15,7 @@ type battle struct {
 	round      int
 	rng        *rand.Rand
 	events     []Event
+	initial    []UnitSnapshot
 }
 
 const MaxRounds = 20 // 超過回合上限判守方（敵方）勝
@@ -30,11 +31,17 @@ func newBattle(in Input) (*battle, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &battle{
+	b := &battle{
 		units:      map[Team][]*unit{TeamAlly: ally, TeamEnemy: enemy},
 		enemyFirst: in.EnemyFirst,
 		rng:        rand.New(rand.NewSource(in.Seed)),
-	}, nil
+	}
+	for _, team := range []Team{TeamAlly, TeamEnemy} {
+		for _, u := range b.units[team] {
+			b.initial = append(b.initial, UnitSnapshot{Ref: u.ref, ID: u.id, MaxHealth: u.maxHealth, Health: u.health, Rage: u.rage})
+		}
+	}
+	return b, nil
 }
 
 // inner function
@@ -121,6 +128,7 @@ func (b *battle) act(u *unit) {
 		b.cast(u, u.skills.NormalAtk, EventNormalAtk)
 	}
 	u.rage += constants.RageGainOnAction
+	b.emit(Event{Type: EventActionRage, Actor: u.ref, Target: u.ref, Remain: u.rage})
 	b.fireUnit(constants.TriggerAfterAction, u)
 }
 
@@ -146,7 +154,7 @@ func (b *battle) playRound() (Team, bool) {
 
 func (b *battle) finish(winner Team, rounds int) *Result {
 	b.emit(Event{Type: EventBattleEnd, Actor: Ref{Team: winner}})
-	return &Result{Winner: winner, Rounds: rounds, Events: b.events}
+	return &Result{Winner: winner, Rounds: rounds, Initial: b.initial, Events: b.events}
 }
 
 // outer function

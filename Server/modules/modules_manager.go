@@ -14,6 +14,7 @@ type (
 		playerHandler   *handler.PlayerHandler
 		backpackHandler *handler.BackpackHandler
 		cardHandler     *handler.CardHandler
+		battleHandler   *handler.BattleHandler
 	}
 
 	ModulesFunc interface {
@@ -48,6 +49,10 @@ func NewModulesManager() *ModulesManager {
 	cardService := services.NewCardService(inventoryRepo, growthService)
 	mm.backpackHandler = handler.NewBackpackHandler(inventoryService)
 	mm.cardHandler = handler.NewCardHandler(cardService)
+	// battle
+	mm.battleHandler = handler.NewBattleHandler(
+		services.NewBattleService(postgresRepo.InitLineupRepo(db), inventoryRepo),
+	)
 	return mm
 }
 
@@ -71,4 +76,8 @@ func (mm *ModulesManager) GetBackpackHandler() *handler.BackpackHandler {
 
 func (mm *ModulesManager) GetCardHandler() *handler.CardHandler {
 	return mm.cardHandler
+}
+
+func (mm *ModulesManager) GetBattleHandler() *handler.BattleHandler {
+	return mm.battleHandler
 }

@@ -118,6 +118,22 @@ export class PitayaClient {
     return this.request("CardHandler.UpgradeCard", { cardId, levels });
   }
 
+  getStages() {
+    return this.request("BattleHandler.GetStages", {});
+  }
+
+  getLineup() {
+    return this.request("BattleHandler.GetLineup", {});
+  }
+
+  saveLineup(slots) {
+    return this.request("BattleHandler.SaveLineup", { slots });
+  }
+
+  startBattle(stageId) {
+    return this.request("BattleHandler.StartBattle", { stageId });
+  }
+
   publish(route, body) {
     if (!this.ws) throw new Error("WebSocket connection is not established.");
     this.ws.send(encodeNotify(route, body));

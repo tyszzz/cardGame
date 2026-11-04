@@ -164,3 +164,63 @@ type (
 		Health   int    `json:"health"`
 	}
 )
+
+type (
+	// BattleStage 為可挑戰的關卡
+	BattleStage struct {
+		StageId string `json:"stageId"`
+		Name    string `json:"name"`
+		Desc    string `json:"desc"`
+	}
+
+	GetStagesResult struct {
+		BaseResult
+		Stages []BattleStage `json:"stages"`
+	}
+
+	GetLineupResult struct {
+		BaseResult
+		Slots []LineupSlot `json:"slots"`
+	}
+
+	SaveLineupResult struct {
+		BaseResult
+	}
+
+	// BattleUnit 為開戰時的單位，前端依此建立畫面後再套用 events
+	BattleUnit struct {
+		Team      string           `json:"team"` // Ally 或 Enemy
+		Position  int              `json:"position"`
+		CardId    string           `json:"cardId"`
+		Name      string           `json:"name"`
+		Rarity    constants.Rarity `json:"rarity"`
+		MaxHealth int              `json:"maxHealth"`
+		Health    int              `json:"health"`
+		Rage      int              `json:"rage"`
+	}
+
+	// BattleEvent 為事件日誌的一筆；type 為 BattleStart、RoundStart、NormalAtk、ActiveSkill、
+	// Passive、Damage、Heal、Rage、Death、RoundEnd、BattleEnd、ActionRage。
+	// 沒有對象時 team 為空字串；Damage/Heal 的 remain 為作用後血量，Rage/ActionRage 的 remain 為怒氣。
+	BattleEvent struct {
+		Round      int    `json:"round"`
+		Type       string `json:"type"`
+		ActorTeam  string `json:"actorTeam,omitempty"`
+		ActorPos   int    `json:"actorPos,omitempty"`
+		TargetTeam string `json:"targetTeam,omitempty"`
+		TargetPos  int    `json:"targetPos,omitempty"`
+		Skill      string `json:"skill,omitempty"`
+		Value      int    `json:"value"`
+		Remain     int    `json:"remain"`
+	}
+
+	StartBattleResult struct {
+		BaseResult
+		StageId       string        `json:"stageId"`
+		Winner        string        `json:"winner"` // Ally 或 Enemy
+		Rounds        int           `json:"rounds"`
+		RageThreshold int           `json:"rageThreshold"` // 施放主動技能所需怒氣，前端以此畫怒氣條
+		Units         []BattleUnit  `json:"units"`
+		Events        []BattleEvent `json:"events"`
+	}
+)

@@ -213,6 +213,14 @@ PGPASSWORD=... psql -h 127.0.0.1 -p 5433 -U tyszzz -d tyszzz -f migration/000001
 - 流程：`BattleStart` → 每回合（`BeforeRoundStart` → 依序行動〔`BeforeAction` → 普攻或主動 → 怒氣 +50 → `AfterAction`〕→ `RoundEnd`）；一方全滅即結束，超過 20 回合（`MaxRounds`）判守方（敵方）勝。
 - 被動與天賦依 trigger 在 `hook.go` 的 `fire` / `fireUnit` 發動，天賦需符合 `unlock`（星數與等級）。目前實作的效果為 Damage、Heal、Rage；Buff、Status、Shield、Dispel、Cleanse 在 `skill.go` 的 `applyEffect` 預留，尚未實作。
 - 同樣的 `Input`（含 `Seed`）一定得到同樣的日誌，可重播與驗證。
+- 日誌事件另有 `ActionRage`：行動結束時發出，`Remain` 為行動後的怒氣（含施放扣除與行動後 +50），讓前端更新怒氣條；`Result.Initial` 為開戰時雙方單位的快照。
+
+### 戰鬥介面與陣容
+
+- 陣容存在 `player_lineup(uid, position 1~6, card_id)`（migration 000010），`(uid, card_id)` 唯一；`BattleHandler.SaveLineup` 以單一 transaction 整批覆蓋。儲存時由 `BattleService` 驗證：1~6 張、位置與卡片不重複、都是玩家持有，且依目前等級算出的生命大於 0（生命為 0 的佔位卡不能上陣）。
+- `BattleHandler` 路由：`GetStages`（目前只有 `mirror` 鏡像）、`GetLineup`、`SaveLineup`、`StartBattle`（請求只帶 `stageId`）。`StartBattle` 由 server 讀取已儲存的陣容，依持有卡片的目前等級用 `StatAtLevel` 算三圍；鏡像關卡的敵方是同陣容同三圍的複本；隨機種子由 server 產生；回傳 `units`（開戰快照）、`events`（日誌）、`winner`、`rounds`、`rageThreshold`。目前只顯示結果，不結算獎勵。
+- result code：21 關卡不存在或陣容不合法、22 還沒有陣容、23 伺服器錯誤。
+- 網頁 client：`web/js/battle_view.js`。「戰鬥」頁簽 → 關卡列表 → 陣容編輯（前排 1~3、後排 4~6；點位置再點卡片放入）→ 戰鬥畫面（敵方後排、敵方前排、我方前排、我方後排共 12 格；血量與怒氣條，怒氣前 100 為一般顏色，超過部分以深色覆蓋）。戰鬥畫面為左右對戰：左邊我方（後排欄、前排欄）、中間 VS、右邊敵方（前排欄、後排欄），每排為直立一欄，兩邊前排靠近中間；陣容編輯與戰鬥畫面同版面：左邊我方可編輯（後排欄、前排欄）、中間 VS、右邊敵方唯讀（前排欄、後排欄），敵方陣容預留由後端以關卡的 `enemyLineup`（`[{ position, name }]`）提供，沒有資料時維持空格；切到戰鬥頁簽時隱藏上方玩家資訊列，頁簽保留；中間顯示戰鬥訊息。播放把日誌依「一個角色的一次行動」分組，每組間隔約 1 秒（只有被動觸發的組 0.5 秒），「跳過」立刻套用剩餘日誌；切換到其他頁簽時播放繼續。
 
 ## Logger
 

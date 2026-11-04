@@ -30,3 +30,10 @@ const (
 	CardStarMax               = 19 // 已達星數上限
 	CardNotEnoughMaterial     = 20 // 進階或升星的材料不足
 )
+
+// 戰鬥
+const (
+	BattleInvalidRequest = 21 // 關卡不存在，或陣容不合法（位置、重複、未持有的卡）
+	BattleNoLineup       = 22 // 還沒有設定陣容
+	BattleFailed         = 23 // 伺服器端錯誤
+)

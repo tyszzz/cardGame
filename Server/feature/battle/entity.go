@@ -49,11 +49,21 @@ type (
 		Remain int       `json:"remain"` // 作用後目標的血量（怒氣事件為怒氣）
 	}
 
+	// UnitSnapshot 是單位開戰時的狀態，前端依此建立畫面後再套用事件日誌。
+	UnitSnapshot struct {
+		Ref       Ref
+		ID        string
+		MaxHealth int
+		Health    int
+		Rage      int
+	}
+
 	// Result 是戰鬥結果。
 	Result struct {
-		Winner Team
-		Rounds int
-		Events []Event
+		Winner  Team
+		Rounds  int
+		Initial []UnitSnapshot // 開戰時雙方單位（先我方後敵方，依位置排序）
+		Events  []Event
 	}
 
 	// unit 是戰鬥中的單位狀態。
@@ -89,6 +99,7 @@ const (
 	EventDeath
 	EventRoundEnd
 	EventBattleEnd
+	EventActionRage // 行動結束時的怒氣（含施放扣除與行動後增加），Remain 為行動後怒氣
 )
 
 const (
@@ -149,7 +160,7 @@ func (t Team) String() string {
 }
 
 func (e EventType) String() string {
-	names := [...]string{"", "BattleStart", "RoundStart", "NormalAtk", "ActiveSkill", "Passive", "Damage", "Heal", "Rage", "Death", "RoundEnd", "BattleEnd"}
+	names := [...]string{"", "BattleStart", "RoundStart", "NormalAtk", "ActiveSkill", "Passive", "Damage", "Heal", "Rage", "Death", "RoundEnd", "BattleEnd", "ActionRage"}
 	if e > 0 && int(e) < len(names) {
 		return names[e]
 	}
