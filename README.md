@@ -58,7 +58,7 @@ self create game
 網頁使用瀏覽器原生 WebSocket 連到 Pitaya，不需要安裝任何套件。ES module 無法從 `file://` 載入，請用靜態伺服器開啟：
 
 ```bash
-python3 -m http.server -d web 5173
+sh web/start.sh
 ```
 
 開啟 `http://localhost:5173`。後端位址在 `web/js/app.js` 的 `SERVER_URL`，預設為 `ws://<目前主機>:8080/`。

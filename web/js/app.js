@@ -343,9 +343,11 @@ function renderProgress(card) {
     ascendButton.disabled = true;
   } else {
     const items = [{ itemId: EXP_ITEM_ID, itemName: "經驗", quantity: card.ascend.exp }, ...card.ascend.items];
-    ascendInfo.textContent = `進階 ${card.stage} → ${card.stage + 1}：${costText(items)}${card.canAscend ? "" : "　（需先升到階上限）"}`;
-    ascendInfo.classList.toggle("short", card.canAscend && !hasItems(items));
-    ascendButton.disabled = busy || !card.canAscend || !hasItems(items);
+    // 升級後只會更新 level、maxLevel、limitBy，所以不用 card.canAscend（只在載入列表時設定一次）
+    const canAscend = card.limitBy === "stage" && card.level >= card.maxLevel;
+    ascendInfo.textContent = `進階 ${card.stage} → ${card.stage + 1}：${costText(items)}${canAscend ? "" : "　（需先升到階上限）"}`;
+    ascendInfo.classList.toggle("short", canAscend && !hasItems(items));
+    ascendButton.disabled = busy || !canAscend || !hasItems(items);
   }
 
   const starInfo = $("star-info");

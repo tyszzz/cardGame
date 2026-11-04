@@ -46,7 +46,7 @@ cd Server && go build ./... && go test ./...
 測試 client：
 
 ```bash
-python3 -m http.server -d web 5173   # 開啟 http://localhost:5173
+sh web/start.sh   # 預設 port 5173，可加參數指定；開啟 http://localhost:5173
 ```
 
 資料庫（兩支腳本皆以 `DATABASE_URL` 環境變數指定連線）：
